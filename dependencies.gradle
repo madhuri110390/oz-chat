@@ -109,7 +109,7 @@ ext.libs = [
         ],
         element     : [
                 'opusencoder'             : "io.element.android:opusencoder:1.2.0",
-                'wysiwyg'                 : "io.element.android:wysiwyg:2.40.0"
+                'wysiwyg'                 : "io.element.android:wysiwyg:2.41.3"
         ],
         squareup    : [
                 'moshi'                  : "com.squareup.moshi:moshi:$moshi",
