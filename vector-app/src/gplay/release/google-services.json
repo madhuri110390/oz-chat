@@ -1,0 +1,98 @@
+{
+  "project_info": {
+    "project_number": "695078798045",
+    "firebase_url": "https://zippfans-49035-default-rtdb.firebaseio.com",
+    "project_id": "zippfans-49035",
+    "storage_bucket": "zippfans-49035.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:695078798045:android:ed7e51693b0e7b30a61134",
+        "android_client_info": {
+          "package_name": "com.openzipper.ozchat"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "695078798045-n0kckqu6dms59b1ca80up193c4iaoqii.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBWPZBKGFL2WMJDv7xVOug4x2yVOpD-_bA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "695078798045-n0kckqu6dms59b1ca80up193c4iaoqii.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:695078798045:android:b5c905994ae063c2a61134",
+        "android_client_info": {
+          "package_name": "com.openzippers.dev_fans.twa"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "695078798045-n0kckqu6dms59b1ca80up193c4iaoqii.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBWPZBKGFL2WMJDv7xVOug4x2yVOpD-_bA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "695078798045-n0kckqu6dms59b1ca80up193c4iaoqii.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:695078798045:android:37a7251147513427a61134",
+        "android_client_info": {
+          "package_name": "com.openzippers.twa"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "695078798045-n0kckqu6dms59b1ca80up193c4iaoqii.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBWPZBKGFL2WMJDv7xVOug4x2yVOpD-_bA"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "695078798045-n0kckqu6dms59b1ca80up193c4iaoqii.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

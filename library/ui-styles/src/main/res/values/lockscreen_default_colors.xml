@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="lockscreen_code">#FFEDE4</color>                   <!-- soft ember white -->
+    <color name="lockscreen_white_selector">#66FFEDE4</color>       <!-- semi-transparent ember white -->
+    <color name="lockscreen_hint_color">#664B2C28</color>           <!-- subtle dark brown hint -->
+    <color name="lockscreen_warning_color">#FF7043</color>          <!-- warm warning red-orange -->
+    <color name="lockscreen_success_color">#03B381</color>          <!-- same as palette_verde (Ember green) -->
+</resources>

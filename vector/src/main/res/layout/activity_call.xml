@@ -1,0 +1,284 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+    FIXES IN THIS FILE:
+    1. Screen share: fullscreenRenderer shows shared screen; pipContainer holds ONE card (remote camera).
+    2. pipContainer uses vertical LinearLayout so future cards stack cleanly in a column.
+    3. bgCallView + otherMemberAvatar always present behind renderers — no black screen ever.
+    4. PiP mode avatar (otherMemberAvatar) constrained to 80dp so it is small in PiP window.
+    5. remotePipRendererWrapper is a NEW card — shows remote camera during screen share.
+       During normal video call this card is GONE; pipRendererWrapper (local self-view) is used.
+-->
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/constraintLayout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@color/bg_call_screen_blur"
+    tools:ignore="MergeRootFrame">
+
+    <!-- ── LAYER 1: Blurred background — always visible, prevents black screen ── -->
+    <ImageView
+        android:id="@+id/bgCallView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:importantForAccessibility="no"
+        android:scaleType="centerCrop"
+        android:background="@color/bg_call_screen"
+        tools:src="@tools:sample/avatars" />
+
+    <!-- ── LAYER 2: Fullscreen renderer (remote video OR shared screen) ── -->
+    <org.webrtc.SurfaceViewRenderer
+        android:id="@+id/fullscreenRenderer"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:visibility="visible" />
+
+    <!-- ── LAYER 3: Center avatar + name — shown when no video stream ── -->
+    <ImageView
+        android:id="@+id/otherMemberAvatar"
+        android:layout_width="180dp"
+        android:layout_height="180dp"
+        android:contentDescription="@string/avatar"
+        android:importantForAccessibility="no"
+        android:scaleType="centerCrop"
+        android:visibility="visible"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        tools:src="@tools:sample/avatars" />
+
+    <ImageView
+        android:id="@+id/smallIsHeldIcon"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:importantForAccessibility="no"
+        android:src="@drawable/ic_call_small_pause"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@id/otherMemberAvatar"
+        app:layout_constraintEnd_toEndOf="@id/otherMemberAvatar"
+        app:layout_constraintStart_toStartOf="@id/otherMemberAvatar"
+        app:layout_constraintTop_toTopOf="@id/otherMemberAvatar" />
+
+    <TextView
+        android:id="@+id/participantNameText"
+        style="@style/Widget.Vector.TextView.Title"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/layout_horizontal_margin"
+        android:layout_marginTop="16dp"
+        android:layout_marginEnd="@dimen/layout_horizontal_margin"
+        android:gravity="center"
+        android:textColor="@android:color/white"
+        android:textStyle="bold"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/otherMemberAvatar"
+        tools:text="Alice" />
+
+    <Button
+        android:id="@+id/callActionText"
+        style="@style/Widget.Vector.Button.Text"
+        android:layout_width="wrap_content"
+        android:layout_height="48dp"
+        android:layout_margin="8dp"
+        android:gravity="center"
+        android:textColor="?colorSecondary"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/participantNameText"
+        tools:text="@string/call_resume_action" />
+
+    <androidx.constraintlayout.widget.Group
+        android:id="@+id/callInfoGroup"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:visibility="visible"
+        app:constraint_referenced_ids="participantNameText,otherMemberAvatar" />
+
+    <!-- ── Toolbar ── -->
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/callToolbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@android:color/transparent"
+        android:fitsSystemWindows="true"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        app:navigationIcon="@drawable/ic_back_24dp"
+        app:navigationIconTint="@color/element_background_light"
+        app:subtitleTextColor="@color/element_background_light"
+        app:title="Video call"
+        app:titleTextColor="@color/element_background_light" />
+
+    <!-- ── Reconnecting indicator ── -->
+    <TextView
+        android:id="@+id/reconnectingIndicator"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:background="#88000000"
+        android:padding="8dp"
+        android:text="@string/call_reconnecting"
+        android:textColor="@android:color/white"
+        android:visibility="gone"
+        android:layout_marginTop="16dp"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/callToolbar" />
+
+    <!--
+        ── PiP overlay container ──
+        Sits between toolbar and controls.
+        Contains a VERTICAL LinearLayout with two cards stacked in a column on the right:
+          • Card 1 (remotePipRendererWrapper): remote camera — shown ONLY during screen share.
+          • Card 2 (pipRendererWrapper):        local self-view — shown during normal video call;
+                                                GONE during screen share (user chose remote-only).
+          • Card 3 (otherKnownCallLayout):      second ongoing call avatar — unchanged logic.
+        During screen share: remotePipRendererWrapper VISIBLE, pipRendererWrapper GONE.
+        During normal video: remotePipRendererWrapper GONE,    pipRendererWrapper VISIBLE.
+    -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/pipContainer"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        app:layout_constraintBottom_toTopOf="@id/callControlsView"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/callToolbar">
+
+        <!--
+            Vertical card stack anchored to bottom-end of pipContainer.
+            Cards flow top-to-bottom: remotePipRendererWrapper above pipRendererWrapper.
+        -->
+        <LinearLayout
+            android:id="@+id/pipColumnLayout"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="16dp"
+            android:orientation="vertical"
+            android:gravity="end"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent">
+
+            <!--
+                Card 1: Remote camera during screen share.
+                Shown when isLocalScreenSharing == true.
+                GONE during normal video call (local self-view card is used instead).
+            -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/remotePipRendererWrapper"
+                android:layout_width="@dimen/call_pip_width"
+                android:layout_height="@dimen/call_pip_height"
+                android:layout_marginBottom="8dp"
+                android:visibility="gone"
+                app:cardCornerRadius="@dimen/call_pip_radius"
+                app:cardElevation="4dp"
+                tools:visibility="visible">
+
+                <!--
+                    remotePipRenderer: shows the remote participant's camera feed
+                    while local screen share occupies the fullscreen renderer.
+                    Initialized in VectorCallActivity alongside the other two renderers.
+                -->
+                <org.webrtc.SurfaceViewRenderer
+                    android:id="@+id/remotePipRenderer"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
+
+                <!-- Fallback avatar shown if remote has no camera during screen share -->
+                <ImageView
+                    android:id="@+id/remotePipAvatarView"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:layout_gravity="center"
+                    android:importantForAccessibility="no"
+                    android:scaleType="centerCrop"
+                    android:visibility="visible"
+                    tools:src="@tools:sample/avatars" />
+
+            </com.google.android.material.card.MaterialCardView>
+
+            <!--
+                Card 2: Local self-view (camera) during normal video call.
+                GONE when screen sharing is active (replaced by remotePipRendererWrapper above).
+            -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/pipRendererWrapper"
+                android:layout_width="@dimen/call_pip_width"
+                android:layout_height="@dimen/call_pip_height"
+                android:visibility="gone"
+                app:cardCornerRadius="@dimen/call_pip_radius"
+                app:cardElevation="4dp"
+                tools:visibility="visible">
+
+                <org.webrtc.SurfaceViewRenderer
+                    android:id="@+id/pipRenderer"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:visibility="gone"
+                    tools:visibility="visible" />
+
+            </com.google.android.material.card.MaterialCardView>
+
+        </LinearLayout>
+
+        <!--
+            Card 3: Second ongoing call — existing logic unchanged.
+            Positioned to the left of the pip column.
+        -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/otherKnownCallLayout"
+            android:layout_width="@dimen/call_pip_width"
+            android:layout_height="@dimen/call_pip_height"
+            android:layout_marginEnd="8dp"
+            android:layout_marginBottom="16dp"
+            android:foreground="?attr/selectableItemBackground"
+            android:visibility="gone"
+            app:cardBackgroundColor="@color/bg_call_screen"
+            app:cardCornerRadius="@dimen/call_pip_radius"
+            app:cardElevation="4dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@id/pipColumnLayout"
+            tools:visibility="visible">
+
+            <ImageView
+                android:id="@+id/otherKnownCallAvatarView"
+                android:layout_width="64dp"
+                android:layout_height="64dp"
+                android:layout_gravity="center"
+                android:importantForAccessibility="no"
+                android:scaleType="centerCrop"
+                tools:src="@tools:sample/avatars" />
+
+            <ImageView
+                android:id="@+id/otherSmallIsHeldIcon"
+                android:layout_width="20dp"
+                android:layout_height="20dp"
+                android:layout_gravity="center"
+                android:importantForAccessibility="no"
+                android:src="@drawable/ic_call_small_pause" />
+
+        </com.google.android.material.card.MaterialCardView>
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- ── Call controls ── -->
+    <im.vector.app.features.call.CallControlsView
+        android:id="@+id/callControlsView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintBottom_toBottomOf="parent" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

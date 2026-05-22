@@ -1,0 +1,565 @@
+
+
+apply plugin: 'com.android.application'
+apply plugin: 'com.google.firebase.appdistribution'
+apply plugin: 'com.google.android.gms.oss-licenses-plugin'
+apply plugin: 'kotlin-android'
+apply plugin: 'kotlin-parcelize'
+apply plugin: 'kotlin-kapt'
+apply plugin: 'com.google.devtools.ksp'
+apply plugin: 'dagger.hilt.android.plugin'
+apply plugin: 'kotlinx-knit'
+apply plugin: 'com.likethesalad.stem'
+apply plugin: 'org.jetbrains.kotlin.plugin.compose'
+apply plugin: 'com.google.gms.google-services'
+
+if (project.hasProperty("coverage")) {
+    apply plugin: 'jacoco'
+}
+
+kapt {
+    correctErrorTypes = true
+}
+
+knit {
+    files = fileTree(project.rootDir) {
+        include '**/*.md'
+        include '**/*.kt'
+        include '**/*.kts'
+        exclude '**/build/**'
+        exclude '**/.gradle/**'
+        exclude '**/towncrier/template.md'
+        exclude '**/CHANGES.md'
+    }
+}
+
+// Note: 2 digits max for each value
+ext.versionMajor = 1
+ext.versionMinor = 6
+// Note: even values are reserved for regular release, odd values for hotfix release.
+// When creating a hotfix, you should decrease the value, since the current value
+// is the value for the next regular release.
+ext.versionPatch = 102
+ext.buildNumber  = 1
+
+static def getGitTimestamp() {
+    def cmd = 'git show -s --format=%ct'
+    return cmd.execute().text.trim() as Long
+}
+
+static def generateVersionCodeFromTimestamp() {
+    // It's unix timestamp, minus timestamp of October 3rd 2018 (first commit date) divided by 100: It's incremented by one every 100 seconds.
+    // plus 20_000_000 for compatibility reason with the previous way the Version Code was computed
+    // Note that the result will be multiplied by 10 when adding the digit for the arch
+    return ((getGitTimestamp() - 1_538_524_800) / 100).toInteger() + 20_000_000
+}
+
+def generateVersionCodeFromVersionName() {
+    // plus 4_000_000 for compatibility reason with the previous way the Version Code was computed
+    // Note that the result will be multiplied by 10 when adding the digit for the arch
+    return (versionMajor * 1_00_00 + versionMinor * 1_00 + versionPatch) + 4_000_000
+}
+
+//def getVersionCode() {
+//    if (gitBranchName() == "develop") {
+//        return generateVersionCodeFromTimestamp()
+//    } else {
+//        return generateVersionCodeFromVersionName()
+//    }
+//}
+def getVersionCode() {
+
+    return generateVersionCodeFromVersionName()
+}
+def getNightlyUniversalApkPath() {
+    def taskNames = gradle.getStartParameter().taskNames.toString()
+    if(taskNames.contains("Nightly")) {
+        return "vector-app/build/outputs/apk/gplay/nightly/vector-gplay-universal-nightly.apk"
+    } else {
+        return ""
+    }
+}
+
+def getFirebaseAppId() {
+//    def taskNames = gradle.getStartParameter().taskNames.toString()
+//    if(taskNames.contains("RustCryptoNightly")) {
+//        return "1:912726360885:android:94fb99347eaa36d100427c"
+//    } else if (taskNames.contains("KotlinCryptoNightly")) {
+    return "1:912726360885:android:efd8545af52a9f9300427c"
+//    } else {
+//        return ""
+//    }
+}
+static def gitRevision() {
+    def cmd = "git rev-parse --short=8 HEAD"
+    return cmd.execute().text.trim()
+}
+
+static def gitRevisionDate() {
+    def cmd = "git show -s --format=%ci HEAD^{commit}"
+    return cmd.execute().text.trim()
+}
+
+static def gitBranchName() {
+    def cmd = "git rev-parse --abbrev-ref HEAD"
+    return cmd.execute().text.trim()
+}
+
+// For Google Play build, build on any other branch than main will have a "-dev" suffix
+//static def getGplayVersionSuffix() {
+//    if (gitBranchName() == "main") {
+//        return ""
+//    } else {
+//        return "-dev"
+//    }
+//}
+static def getGplayVersionSuffix() {
+    return "" // Always empty, so no "-dev" suffix
+}
+static def gitTag() {
+    def cmd = "git describe --exact-match --tags"
+    return cmd.execute().text.trim()
+}
+
+// For F-Droid build, build on a not tagged commit will have a "-dev" suffix
+//static def getFdroidVersionSuffix() {
+//    if (gitTag() == "") {
+//        return "-dev"
+//    } else {
+//        return ""
+//    }
+//}
+static def getFdroidVersionSuffix() {
+    return ""
+}
+project.android.buildTypes.all { buildType ->
+    buildType.javaCompileOptions.annotationProcessorOptions.arguments =
+            [
+                    validateEpoxyModelUsage: String.valueOf(buildType.name == 'debug')
+            ]
+}
+
+// map for the version codes last digit
+// x86 must have greater values than arm
+// 64 bits have greater value than 32 bits
+ext.abiVersionCodes = ["armeabi-v7a": 1, "arm64-v8a": 2, "x86": 3, "x86_64": 4].withDefault { 0 }
+
+ext.apiFlavorCodes = [legacy: 1, modern: 2]
+
+// ----------------- ADDED: helpers to control splits during bundle builds -----------------
+def isBundleBuild = gradle.startParameter.taskNames.any {
+    def n = it.toLowerCase()
+    n.contains("bundle") || n.contains("prebundle")
+}
+// Enable splits only when explicitly requested AND not building a bundle
+def enableApkSplits = project.hasProperty("enableApkSplits") &&
+        project.property("enableApkSplits") == "true" &&
+        !isBundleBuild
+// ----------------------------------------------------------------------------------------
+
+def baseCode = project.getVersionCode()
+
+android {
+    namespace "im.vector.application"
+    // Due to a bug introduced in Android gradle plugin 3.6.0, we have to specify the ndk version to use
+    // Ref: https://issuetracker.google.com/issues/144111441
+    ndkVersion "26.1.10909125"
+    compileSdk 36
+
+
+    defaultConfig {
+        applicationId "com.openzipper.ozchat"
+        // Set to API 21: see #405
+        minSdk versions.minSdk
+        targetSdk versions.targetSdk
+        multiDexEnabled true
+
+        externalNativeBuild {
+            // For ndk-build, instead use the ndkBuild block.
+            cmake {
+                // Passes optional arguments to CMake.
+                arguments += [
+                        "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON",
+                        "-DANDROID_PAGE_SIZE_AGNOSTIC=ON",
+                        "-DCMAKE_SHARED_LINKER_FLAGS=-Wl,-z,max-page-size=0x4000"
+                ]
+            }
+        }
+
+        renderscriptTargetApi 24
+        renderscriptSupportModeEnabled true
+
+
+        // `develop` branch will have version code from timestamp, to ensure each build from CI has a incremented versionCode.
+        // Other branches (main, features, etc.) will have version code based on application version.
+        versionCode project.getVersionCode()
+
+        // Required for sonar analysis
+        versionName "${versionMajor}.${versionMinor}.${versionPatch}-sonar"
+
+        // Generate a random app task affinity
+        manifestPlaceholders = [appTaskAffinitySuffix: "H_${gitRevision()}"]
+
+        buildConfigField "String", "GIT_REVISION", "\"${gitRevision()}\""
+        buildConfigField "String", "GIT_REVISION_DATE", "\"${gitRevisionDate()}\""
+        buildConfigField "String", "GIT_BRANCH_NAME", "\"${gitBranchName()}\""
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        // Keep abiFilter for the universalApk
+        ndk {
+            abiFilters "armeabi-v7a", "x86", 'arm64-v8a', 'x86_64'
+        }
+
+        // Ref: https://developer.android.com/studio/build/configure-apk-splits.html
+        splits {
+            // Configures multiple APKs based on ABI.
+            abi {
+                // Enables building multiple APKs per ABI.
+                // CHANGED: was `enable true`
+                enable enableApkSplits
+
+                // By default all ABIs are included, so use reset() and include to specify that we only
+                // want APKs for armeabi-v7a, x86, arm64-v8a and x86_64.
+
+                // Resets the list of ABIs that Gradle should create APKs for to none.
+                reset()
+
+                // Specifies a list of ABIs that Gradle should create APKs for.
+                include "armeabi-v7a", "x86", "arm64-v8a", "x86_64"
+
+                // Generate a universal APK that includes all ABIs, so user who install from CI tool can use this one by default.
+                // CHANGED: only true when splits are enabled (not for bundles)
+                universalApk enableApkSplits
+            }
+        }
+
+        applicationVariants.all { variant ->
+            if (!enableApkSplits) return
+
+            // leave room for api (×10) and abi (×1)
+            def base = variant.versionCode * 100
+
+            // find this variant’s api flavor (legacy/modern)
+            def apiFlavor = variant.productFlavors.find { it.dimension == 'api' }?.name
+            def apiDigit  = (project.ext.apiFlavorCodes[apiFlavor] ?: 0) as int
+
+            variant.outputs.each { output ->
+                def abiDigit = project.ext.abiVersionCodes.get(output.getFilter(OutputFile.ABI))
+
+                output.versionCodeOverride = base + apiDigit * 10 + abiDigit
+
+                print "VAR ${variant.name} | API=${apiFlavor}(${apiDigit}) ABI=${output.getFilter(OutputFile.ABI)}(${abiDigit}) -> vCode ${output.versionCodeOverride}\n"
+
+                output.outputFileName = output.outputFileName.replace("vector-app", "vector")
+            }
+        }
+
+        // The following argument makes the Android Test Orchestrator run its
+        // "pm clear" command after each test invocation. This command ensures
+        // that the app's state is completely cleared between tests.
+        testInstrumentationRunnerArguments clearPackageData: 'true'
+    }
+
+    testOptions {
+        // Disables animations during instrumented tests you run from the command line…
+        // This property does not affect tests that you run using Android Studio.”
+        animationsDisabled = true
+
+        // Comment to run on Android 12
+//        execution 'ANDROIDX_TEST_ORCHESTRATOR'
+    }
+
+    signingConfigs {
+        debug {
+            keyAlias 'androiddebugkey'
+            keyPassword 'android'
+            storeFile file('./signature/debug.keystore')
+            storePassword 'android'
+        }
+        nightly {
+/*            keyAlias System.env.ELEMENT_ANDROID_NIGHTLY_KEYID ?: project.property("signing.element.nightly.keyId")
+            keyPassword System.env.ELEMENT_ANDROID_NIGHTLY_KEYPASSWORD ?: project.property("signing.element.nightly.keyPassword")
+            storeFile file('./signature/jojocell-key.jks')
+            storePassword System.env.ELEMENT_ANDROID_NIGHTLY_STOREPASSWORD ?: project.property("signing.element.nightly.storePassword")*/
+        }
+        release {
+            keyAlias project.property("signing.element.keyId")
+            keyPassword project.property("signing.element.keyPassword")
+            storeFile file(project.property("signing.element.storePath"))
+            storePassword project.property("signing.element.storePassword")
+        }
+    }
+
+    buildTypes {
+        debug {
+            applicationIdSuffix ""
+            signingConfig signingConfigs.debug
+            resValue "string", "app_name", "OZ-Chat"
+
+            if (project.hasProperty("coverage")) {
+                testCoverageEnabled = project.coverage == "true"
+            }
+        }
+
+        release {
+            resValue "string", "app_name", "OZ-Chat"
+            postprocessing {
+                // FIXME Set to true.
+                removeUnusedCode false
+                removeUnusedResources true
+                // We do not activate obfuscation as it makes it hard then to read crash reports, and it's a bit useless on an open source project :)
+                obfuscate false
+                optimizeCode true
+                proguardFiles 'proguard-rules.pro'
+            }
+            signingConfig signingConfigs.release
+            // signingConfig signingConfigs.release
+        }
+
+        nightly {
+            initWith release
+            applicationIdSuffix ".nightly"
+            versionNameSuffix ""
+            // Just override the background color of the launcher icon for the nightly build.
+            // We need to copy paste this block, this is not done automatically by `initWith release`
+            postprocessing {
+                // FIXME Set to true.
+                removeUnusedCode false
+                removeUnusedResources true
+                // We do not activate obfuscation as it makes it hard then to read crash reports, and it's a bit useless on an open source project :)
+                obfuscate false
+                optimizeCode true
+                proguardFiles 'proguard-rules.pro'
+            }
+            matchingFallbacks = ['release']
+            signingConfig signingConfigs.nightly
+            firebaseAppDistribution {
+                artifactType = "APK"
+                // We upload the universal APK to fix this error:
+                // "App Distribution found more than 1 output file for this variant.
+                // Please contact firebase-support@google.com for help using APK splits with App Distribution."
+                artifactPath = "$rootDir/${getNightlyUniversalApkPath()}"
+                // This file will be generated by the GitHub action
+                releaseNotesFile = "CHANGES_NIGHTLY.md"
+                groups = "external-testers"
+                // This should not be required, but if I do not add the appId, I get this error:
+                // "App Distribution halted because it had a problem uploading the APK: [404] Requested entity was not found."
+                appId = "${getFirebaseAppId()}"
+            }
+        }
+    }
+
+    sourceSets {
+        nightly {
+            java.srcDirs += "src/release/java"
+        }
+    }
+
+   // flavorDimensions = ["store"]
+    flavorDimensions = ["store", "api"]
+
+    productFlavors {
+        gplay {
+            apply plugin: 'com.google.gms.google-services'
+            afterEvaluate {
+                tasks.matching { it.name.contains("GoogleServices") && !it.name.contains("Gplay") }*.enabled = false
+            }
+
+            dimension "store"
+            isDefault = true
+//            versionName "${versionMajor}.${versionMinor}.${versionPatch}${getGplayVersionSuffix()}"
+            versionName "${versionMajor}.${versionMinor}.${versionPatch}"
+            buildConfigField "String", "SHORT_FLAVOR_DESCRIPTION", "\"G\""
+            buildConfigField "String", "FLAVOR_DESCRIPTION", "\"GooglePlay\""
+        }
+
+        fdroid {
+            dimension "store"
+           // versionName "${versionMajor}.${versionMinor}.${versionPatch}${getFdroidVersionSuffix()}"
+            versionName "${versionMajor}.${versionMinor}.${versionPatch}"
+            buildConfigField "String", "SHORT_FLAVOR_DESCRIPTION", "\"F\""
+            buildConfigField "String", "FLAVOR_DESCRIPTION", "\"FDroid\""
+        }
+
+        legacy {
+            dimension "api"
+            minSdk 23          // serves Android 5.0–7.1
+            versionCode baseCode * 100 + 10
+        }
+        modern {
+            dimension "api"
+            minSdk 26          // serves Android 8.0+
+            versionCode baseCode * 100 + 20
+        }
+
+    }
+
+    variantFilter { variant ->
+        def names = variant.flavors*.name
+        def buildType = variant.buildType.name
+        // There is no nightly for fdroid
+        if (names.contains("fdroid") && buildType == "nightly") {
+            // Gradle ignores any variants that satisfy the conditions above.
+            setIgnore(true)
+        }
+    }
+
+    lint {
+        lintConfig file("../tools/lint/lint.xml")
+
+        checkDependencies true
+        abortOnError true
+    }
+
+    compileOptions {
+        sourceCompatibility versions.sourceCompat
+        targetCompatibility versions.targetCompat
+    }
+
+    kotlinOptions {
+        jvmTarget = versions.jvmTarget
+        freeCompilerArgs += [
+                "-opt-in=kotlin.RequiresOptIn",
+                // Fixes false positive "This is an internal Mavericks API. It is not intended for external use."
+                // of MvRx `by viewModel()` calls. Maybe due to the inlining of code... This is a temporary fix...
+                "-opt-in=com.airbnb.mvrx.InternalMavericksApi",
+                // Opt in for kotlinx.coroutines.FlowPreview too
+                "-opt-in=kotlinx.coroutines.FlowPreview",
+                // Opt in for kotlinx.coroutines.ExperimentalCoroutinesApi too
+                "-opt-in=kotlinx.coroutines.ExperimentalCoroutinesApi",
+        ]
+    }
+
+    buildFeatures {
+        viewBinding true
+        compose true
+        buildConfig true
+    }
+
+/*    composeOptions {
+        kotlinCompilerExtensionVersion = "1.5.14"
+    }*/
+
+    packaging {
+        pickFirsts.add("META-INF/LICENSE.md")
+        pickFirsts.add("META-INF/LICENSE-notice.md")
+        pickFirsts.add("MANIFEST.MF")
+        jniLibs {
+            useLegacyPackaging = false
+        }
+    }
+}
+
+android.applicationVariants.all { variant ->
+    // Dynamically handle all variants
+    def navigationTaskName = "process${variant.name.capitalize()}NavigationResources"
+    def resolvePlaceholdersTaskName = "resolve${variant.name.capitalize()}Placeholders"
+
+    tasks.findByName(navigationTaskName)?.dependsOn(resolvePlaceholdersTaskName)
+}
+
+dependencies {
+    implementation project(':vector')
+    implementation project(':vector-config')
+    implementation project(':library:core-utils')
+    implementation project(':library:ui-strings')
+    implementation 'androidx.test.espresso:espresso-core:3.7.0'
+    debugImplementation project(':library:external:span')
+    debugImplementation project(':library:ui-styles')
+    implementation libs.dagger.hilt
+    implementation 'androidx.multidex:multidex:2.0.1'
+    implementation "androidx.sharetarget:sharetarget:1.2.0"
+    implementation 'androidx.browser:browser:1.8.0'
+    implementation platform('com.google.firebase:firebase-bom:32.7.0')
+    implementation 'com.google.firebase:firebase-messaging-ktx'
+    // Compose BOM
+    implementation platform(libs.compose.bom)
+
+    // Compose core
+    implementation libs.compose.ui
+    implementation libs.compose.foundation
+    implementation libs.compose.runtime
+
+    // Material 2 + Material 3
+    implementation libs.compose.material
+    implementation libs.compose.material3
+
+    // Activity & Lifecycle
+    implementation libs.compose.activity
+    implementation libs.compose.lifecycleRuntime
+
+    // Tooling & Previews
+    implementation libs.compose.uiToolingPreview
+    debugImplementation libs.compose.uiTooling
+
+    // Coil for image loading in Compose
+    implementation libs.coil.coilCompose
+
+
+    // For preview tools (optional)
+    debugImplementation 'androidx.compose.ui:ui-tooling'
+
+    // Flipper, debug builds only
+    debugImplementation(libs.flipper.flipper) {
+        exclude group: 'com.facebook.fbjni', module: 'fbjni'
+    }
+    debugImplementation(libs.flipper.flipperNetworkPlugin) {
+        exclude group: 'com.facebook.fbjni', module: 'fbjni'
+    }
+    debugImplementation 'com.facebook.soloader:soloader:0.10.5'
+    debugImplementation "com.kgurgul.flipper:flipper-realm-android:2.3.0"
+
+    gplayImplementation "com.google.android.gms:play-services-location:21.3.0"
+    // UnifiedPush gplay flavor only
+    gplayImplementation platform(libs.google.firebaseBom)
+    gplayImplementation(libs.google.messaging) {
+        exclude group: 'com.google.firebase', module: 'firebase-core'
+        exclude group: 'com.google.firebase', module: 'firebase-analytics'
+        exclude group: 'com.google.firebase', module: 'firebase-measurement-connector'
+    }
+
+    // Nightly
+    // API-only library
+    gplayImplementation libs.google.appdistributionApi
+    // Full SDK implementation
+    nightlyImplementation libs.google.appdistribution
+
+    // OSS License, gplay flavor only
+    gplayImplementation 'com.google.android.gms:play-services-oss-licenses:17.1.0'
+    ksp libs.dagger.hiltCompiler
+    kapt libs.airbnb.epoxyProcessor
+    implementation "androidx.hilt:hilt-work:1.0.0"
+    kapt "androidx.hilt:hilt-compiler:1.0.0"
+    androidTestImplementation libs.androidx.testCore
+    androidTestImplementation libs.androidx.testRunner
+    androidTestImplementation libs.androidx.testRules
+    androidTestImplementation libs.androidx.junit
+    androidTestImplementation libs.androidx.espressoCore
+    androidTestImplementation libs.androidx.espressoContrib
+    androidTestImplementation libs.androidx.espressoIntents
+    androidTestImplementation libs.tests.kluent
+    androidTestImplementation libs.androidx.coreTesting
+    androidTestImplementation(libs.jetbrains.coroutinesTest) {
+        exclude group: "org.jetbrains.kotlinx", module: "kotlinx-coroutines-debug"
+    }
+    // Plant Timber tree for test
+    androidTestImplementation libs.tests.timberJunitRule
+    // "The one who serves a great Espresso"
+    androidTestImplementation('com.adevinta.android:barista:4.3.0') {
+        exclude group: 'org.jetbrains.kotlin'
+    }
+
+
+    androidTestImplementation libs.mockk.mockkAndroid
+    androidTestUtil libs.androidx.orchestrator
+    androidTestImplementation libs.androidx.fragmentTesting
+    androidTestImplementation "org.jetbrains.kotlin:kotlin-reflect:1.8.21"
+    debugImplementation libs.androidx.fragmentTestingManifest
+    debugImplementation 'com.squareup.leakcanary:leakcanary-android:2.10'
+}
+
+
+
+
+

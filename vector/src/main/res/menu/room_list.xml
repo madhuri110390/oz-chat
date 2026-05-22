@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+    <item
+        android:id="@+id/menu_home_connections"
+        android:icon="@drawable/ic_person_add"
+        android:title="Connections"
+        android:orderInCategory="10"
+        app:iconTint="?attr/colorControlNormal"
+        app:showAsAction="always" />
+
+    <item
+        android:id="@+id/menu_home_filter"
+        android:icon="@drawable/ic_home_search"
+        android:title="@string/home_filter_placeholder_home"
+        android:orderInCategory="20"
+        app:iconTint="?attr/colorControlNormal"
+        app:showAsAction="always" />
+    <item
+        android:id="@+id/menu_home_mark_all_as_read"
+        android:icon="@drawable/ic_material_done"
+        android:orderInCategory="30"
+        android:title="@string/action_mark_all_as_read" />
+
+    <item
+        android:id="@+id/menu_home_dialpad"
+        android:title="@string/call_dial_pad_title"
+        android:visible="false"
+        app:showAsAction="never"
+        tools:visible="true" />
+</menu>

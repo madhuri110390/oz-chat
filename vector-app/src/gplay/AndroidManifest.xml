@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <application>
+
+        <!-- Firebase components -->
+        <meta-data
+            android:name="firebase_analytics_collection_deactivated"
+            android:value="true" />
+
+        <!--
+            Used when the backend sends an FCM `notification` payload.
+            This ensures Android uses the same channel id as our in-app notifications.
+        -->
+        <meta-data
+            android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="DEFAULT_NOISY_NOTIFICATION_CHANNEL_ID_V4" />
+
+        <!-- Add tools:ignore="Instantiatable" for the error reported only by the CI :/ -->
+        <service android:name="im.vector.app.push.fcm.VectorFirebaseMessagingService"
+            android:exported="false"
+            android:stopWithTask="false"
+            tools:ignore="Instantiatable"
+            tools:node="replace">
+            <intent-filter>
+                <action android:name="com.google.firebase.MESSAGING_EVENT" />
+            </intent-filter>
+        </service>
+        <service
+            android:name=".core.network.NetworkConnectionMonitor"
+            android:exported="false" />
+    </application>
+
+</manifest>

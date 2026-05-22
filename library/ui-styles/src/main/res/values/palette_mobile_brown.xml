@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Alias to the palette colors
+      Source: https://www.figma.com/file/X4XTH9iS2KGJ2wFKDqkyed/Compound?node-id=1521%3A23026 -->
+
+    <color name="element_accent_light_brown">@color/palette_ozchat_accent_light_brown</color>         <!-- #FF7043 -->
+    <color name="element_accent_dark_brown">@color/palette_ozchat_accent_dark_brown</color>        <!-- #FFB74D (softer in dark mode) -->
+
+    <color name="element_alert_light_brown">@color/palette_melon_brown</color>        <!-- #FFB74D -->
+    <color name="element_alert_dark_brown">@color/palette_ozchat_accent_dark_brown</color>        <!-- #FFCC80 -->
+
+    <color name="element_link_light_brown">@color/palette_links_brown</color>                 <!-- #42A5F5 -->
+    <color name="element_link_dark_brown">@color/palette_ozchat_accent_dark_brown</color>                  <!-- #29B6F6 -->
+
+    <!-- attr for content colors -->
+    <attr name="vctr_content_primary_brown" format="color" />
+    <attr name="vctr_content_secondary_brown" format="color" />
+    <attr name="vctr_content_tertiary_brown" format="color" />
+    <attr name="vctr_content_quaternary_brown" format="color" />
+    <attr name="vctr_content_quinary_brown" format="color" />
+
+    <!-- Light Mode -->
+    <color name="element_content_primary_light_brown">@color/palette_black_900_brown</color>         <!-- #3A0E25 -->
+    <color name="element_content_secondary_light_brown">@color/palette_gray_200_brown</color>        <!-- #6E3B3B -->
+    <color name="element_content_tertiary_light_brown">@color/palette_gray_150_brown</color>         <!-- #C27C6C -->
+    <color name="element_content_quaternary_light_brown">@color/palette_gray_100_brown</color>       <!-- #F5D2C5 -->
+    <color name="element_content_quinary_light_brown">@color/palette_gray_50_brown</color>           <!-- #FFEDE4 -->
+
+    <!-- Dark Mode -->
+    <color name="element_content_primary_dark_brown">@color/palette_white_brown</color>              <!-- #FFFFFF -->
+    <color name="element_content_secondary_dark_brown">@color/palette_gray_250_brown</color>         <!-- #FFCCBC -->
+    <color name="element_content_tertiary_dark_brown">@color/palette_gray_300_brown</color>          <!-- #EF9A9A -->
+    <color name="element_content_quaternary_dark_brown">@color/palette_gray_400_brown</color>        <!-- #8D6E63 -->
+    <color name="element_content_quinary_dark_brown">@color/palette_gray_450_brown</color>           <!-- #5D4037 -->
+
+    <!-- System backgrounds -->
+    <attr name="vctr_system_brown" format="color" />
+    <color name="element_system_light_brown">@color/palette_gray_25_brown</color>                    <!-- #FFF8F5 -->
+    <color name="element_system_dark_brown">@color/palette_black_950_brown</color>                   <!-- #1A0D0C -->
+
+    <color name="element_background_light_brown">@color/palette_white_brown</color>
+    <color name="element_background_dark_brown">@color/palette_blue_ozChat_brown</color>
+    <color name="element_background_black_brown">@android:color/black</color>
+
+    <!-- Decorative / name-based colors -->
+    <color name="element_name_01_brown">@color/palette_azure_brown</color>     <!-- #29B6F6 -->
+    <color name="element_name_02_brown">@color/palette_grape_brown</color>     <!-- #880E4F -->
+    <color name="element_name_03_brown">@color/palette_verde_brown</color>     <!-- #66BB6A -->
+    <color name="element_name_04_brown">@color/palette_polly_brown</color>     <!-- #FFCCBC -->
+    <color name="element_name_05_brown">@color/palette_melon_brown</color>     <!-- #E53935 -->
+    <color name="element_name_06_brown">@color/palette_aqua_brown</color>      <!-- #4DD0E1 -->
+    <color name="element_name_07_brown">@color/palette_prune_brown</color>     <!-- #9C27B0 -->
+    <color name="element_name_08_brown">@color/palette_kiwi_brown</color>      <!-- #74D12C -->
+
+    <!-- Room avatars -->
+    <color name="element_room_01_brown">@color/palette_verde_brown</color>
+    <color name="element_room_02_brown">@color/palette_azure_brown</color>
+    <color name="element_room_03_brown">@color/palette_grape_brown</color>
+</resources>

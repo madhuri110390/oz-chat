@@ -1,0 +1,331 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!--      Theme Brown Starts here-->
+    <!-- Error colors -->
+    <color name="vector_warning_color_2_brown">@color/palette_melon_brown</color>
+    <color name="vector_info_color_brown">@color/palette_azure_brown</color>
+
+    <!-- Notification view colors -->
+    <color name="soft_resource_limit_exceeded_brown">@color/palette_azure_brown</color>
+    <color name="hard_resource_limit_exceeded_brown">?colorError</color>
+
+    <!-- Notification (do not depend on theme) -->
+    <color name="notification_accent_color_brown">@color/palette_azure_brown</color>
+    <color name="key_share_req_accent_color_brown">@color/palette_melon_brown</color>
+
+    <!-- Source: https://zpl.io/aBKw9Mk -->
+    <color name="bg_call_screen_blur_brown">#99000000</color>
+    <color name="bg_call_screen_brown">#311B16</color> <!-- OZ Ember -->
+
+    <color name="vctr_notice_secondary_alpha12_brown">#1E61708B</color>
+
+    <!-- Other useful color -->
+    <color name="emoji_color_brown">@android:color/black</color>
+    <color name="join_conference_animated_color_brown">#0BAC7E</color>
+
+    <color name="half_transparent_status_bar_brown">#80000000</color>
+    <color name="black_alpha_brown">#55000000</color>
+    <color name="black_54_brown">#8A000000</color>
+
+    <!-- Android system bars -->
+    <color name="android_status_bar_background_ligh_brownt">@color/element_system_light_brown</color>
+    <color name="android_navigation_bar_background_light_brown">@color/element_system_light_brown</color>
+    <color name="android_status_bar_background_dark_brown">@color/element_background_dark_brown</color>
+    <color name="android_navigation_bar_background_dark_brown">@color/element_system_dark_brown</color>
+
+    <!-- Toolbar / UI sections -->
+    <attr name="vctr_toolbar_background_brown" format="color" />
+    <attr name="vctr_header_background_brown" format="color" />
+    <attr name="vctr_list_separator_brown" format="color" />
+    <attr name="vctr_list_separator_system_brown" format="color" />
+    <attr name="vctr_list_separator_on_surface_brown" format="color" />
+    <attr name="vctr_unread_background_brown" format="color" />
+
+    <!-- FAB Label -->
+    <attr name="vctr_fab_label_bg_brown" format="color" />
+    <color name="vctr_fab_label_bg_light_brown">@android:color/white</color>
+    <color name="vctr_fab_label_bg_dark_brown">#311B16</color>
+    <color name="vctr_fab_label_bg_black_brown">#311B16</color>
+
+    <attr name="vctr_fab_label_stroke_brown" format="color" />
+    <color name="vctr_fab_label_stroke_light_brown">#1EFFFFFF</color>
+    <color name="vctr_fab_label_stroke_dark_brown">@android:color/black</color>
+    <color name="vctr_fab_label_stroke_black_brown">@android:color/black</color>
+
+    <attr name="vctr_fab_label_color_brown" format="color" />
+    <color name="vctr_fab_label_color_light_brown">#3A0E25</color>
+    <color name="vctr_fab_label_color_dark_brown">#FFCCBC</color>
+    <color name="vctr_fab_label_color_black_brown">#FFCCBC</color>
+
+    <!-- Touch overlay -->
+    <attr name="vctr_touch_guard_bg_brown" format="color" />
+    <color name="vctr_touch_guard_bg_light_brown">#66000000</color>
+    <color name="vctr_touch_guard_bg_dark_brown">#BF000000</color>
+    <color name="vctr_touch_guard_bg_black_brown">#BF000000</color>
+
+    <!-- Widget banners -->
+    <attr name="vctr_room_active_widgets_banner_bg_brown" format="color" />
+    <color name="vctr_room_active_widgets_banner_bg_light_brown">#FFEDE4</color>
+    <color name="vctr_room_active_widgets_banner_bg_dark_brown">#311B16</color>
+    <color name="vctr_room_active_widgets_banner_bg_black_brown">#311B16</color>
+
+    <attr name="vctr_room_active_widgets_banner_text_brown" format="color" />
+    <color name="vctr_room_active_widgets_banner_text_light_brown">#6E3B3B</color>
+    <color name="vctr_room_active_widgets_banner_text_dark_brown">#FFCCBC</color>
+    <color name="vctr_room_active_widgets_banner_text_black_brown">#FFCCBC</color>
+
+    <!-- Waiting overlay -->
+    <attr name="vctr_waiting_background_color_brown" format="color" />
+    <color name="vctr_waiting_background_color_light_brown">#AAAAAAAA</color>
+    <color name="vctr_waiting_background_color_dark_brown">#55555555</color>
+
+    <color name="vctr_disabled_view_color_light_brown">#EEEEEE</color>
+
+    <!-- Reactions -->
+    <attr name="vctr_reaction_background_off_brown" format="color" />
+    <color name="vctr_reaction_background_off_light_brown">#FFF3F8FD</color>
+    <color name="vctr_reaction_background_off_dark_brown">#22252B</color>
+    <color name="vctr_reaction_background_off_black_brown">#22252B</color>
+
+    <attr name="vctr_reaction_background_on_brown" format="color" />
+    <color name="vctr_reaction_background_on_light_brown">#2011BC8A</color>
+    <color name="vctr_reaction_background_on_dark_brown">#4011BC8A</color>
+    <color name="vctr_reaction_background_on_black_brown">#4011BC8A</color>
+
+    <!-- Keys backup -->
+    <attr name="vctr_keys_backup_banner_accent_color_brown" format="color" />
+    <color name="vctr_keys_backup_banner_accent_color_light_brown">#FFF8E3</color>
+    <color name="vctr_keys_backup_banner_accent_color_dark_brown">#22262E</color>
+
+    <!-- Chat snow -->
+    <attr name="vctr_chat_effect_snow_background_brown" format="color" />
+    <color name="vctr_chat_effect_snow_background_light_brown">@color/black_alpha</color>
+    <color name="vctr_chat_effect_snow_background_dark_brown">@android:color/transparent</color>
+
+    <!-- Toasts -->
+    <attr name="vctr_toast_background_brown" format="color" />
+    <color name="vctr_toast_background_light_brown">@color/palette_black_900_brown</color>
+    <color name="vctr_toast_background_dark_brown">@color/palette_gray_400_brown</color>
+
+    <!-- Presence Indicators -->
+    <attr name="vctr_presence_indicator_offline_brown" format="color" />
+    <color name="vctr_presence_indicator_offline_light_brown">@color/palette_gray_100_brown</color>
+    <color name="vctr_presence_indicator_offline_dark_brown">@color/palette_gray_450_brown</color>
+
+    <attr name="vctr_presence_indicator_online_brown" format="color" />
+    <color name="vctr_presence_indicator_online_light_brown">@color/palette_element_green_brown</color>
+    <color name="vctr_presence_indicator_online_dark_brown">@color/palette_element_green_brown</color>
+
+    <attr name="vctr_presence_indicator_busy_brown" format="color" />
+    <color name="vctr_presence_indicator_busy_light_brown">@color/element_alert_light_brown</color>
+    <color name="vctr_presence_indicator_busy_dark_brown">@color/element_alert_dark_brown</color>
+
+    <attr name="vctr_presence_indicator_away_brown" format="color" />
+    <color name="vctr_presence_indicator_away_light_brown">@color/palette_element_orange_brown</color>
+    <color name="vctr_presence_indicator_away_dark_brown">@color/palette_element_orange_brown</color>
+
+    <!-- Location Sharing -->
+    <attr name="vctr_live_location_brown" format="color" />
+    <color name="vctr_live_location_light_brown">@color/palette_prune_brown</color>
+    <color name="vctr_live_location_dark_brown">@color/palette_prune_brown</color>
+
+    <!-- WYSIWYG Editor -->
+    <attr name="vctr_rich_text_editor_menu_button_background_brown" format="color" />
+    <color name="vctr_rich_text_editor_menu_button_background_light_brown">#FCE4EC</color>
+    <color name="vctr_rich_text_editor_menu_button_background_dark_brown">#311B16</color>
+
+    <!-- Critical UI tones -->
+    <attr name="vctr_bg_critical_subtle_brown" format="color" />
+    <color name="vctr_bg_critical_subtle_ligh_brownt">#FFF7F6</color>
+    <color name="vctr_bg_critical_subtle_dark_brown">#3E0000</color>
+
+    <attr name="vctr_border_critical_subtle_brown" format="color" />
+    <color name="vctr_border_critical_subtle_light_brown">#FFC5BC</color>
+    <color name="vctr_border_critical_subtle_dark_brown">#710000</color>
+
+    <attr name="vctr_icon_critical_primary_brown" format="color" />
+    <color name="vctr_icon_critical_primary_light_brown">#D51928</color>
+    <color name="vctr_icon_critical_primary_dark_brown">#FD3E3C</color>
+
+    <attr name="vctr_text_critical_primary_brown" format="color" />
+    <color name="vctr_text_critical_primary_light_brown">#D51928</color>
+    <color name="vctr_text_critical_primary_dark_brown">#FD3E3C</color>
+
+    <attr name="vctr_text_primary_brown" format="color" />
+    <color name="vctr_text_primary_light_brown">#1B1D22</color>
+    <color name="vctr_text_primary_dark_brown">#EBEEF2</color>
+
+
+
+<!--<resources>-->
+<!--      Theme Default Starts here-->
+    <!-- Error colors -->
+    <color name="vector_warning_color_2">@color/palette_melon</color>
+    <color name="vector_info_color">@color/palette_azure</color>
+
+    <!-- Notification view colors -->
+    <color name="soft_resource_limit_exceeded">@color/palette_element_orange_brown</color>
+    <color name="hard_resource_limit_exceeded">?colorError</color>
+
+    <!-- Notification (do not depend on theme) -->
+    <color name="notification_accent_color">@color/palette_element_orange_brown</color>
+    <color name="key_share_req_accent_color">@color/palette_melon</color>
+
+    <!-- Call screen -->
+    <color name="bg_call_screen_blur">#99000000</color>
+    <color name="bg_call_screen">@color/palette_black_950</color>
+
+    <color name="vctr_notice_secondary_alpha12">#1E61708B</color>
+
+    <!-- Other useful color -->
+    <color name="emoji_color">@android:color/black</color>
+    <color name="join_conference_animated_color">@color/palette_element_orange_brown</color>
+
+    <color name="half_transparent_status_bar">#80000000</color>
+    <color name="black_alpha">#55000000</color>
+    <color name="black_54">#8A000000</color>
+
+    <!-- Android system bars -->
+    <color name="android_status_bar_background_light">@color/element_system_light</color>
+    <color name="android_navigation_bar_background_light">@color/element_system_light</color>
+    <color name="android_status_bar_background_dark">@color/element_background_dark</color>
+    <color name="android_navigation_bar_background_dark">@color/element_system_dark</color>
+
+    <!-- Toolbar / UI sections -->
+    <attr name="vctr_toolbar_background" format="color" />
+    <attr name="vctr_header_background" format="color" />
+    <attr name="vctr_list_separator" format="color" />
+    <attr name="vctr_list_separator_system" format="color" />
+    <attr name="vctr_list_separator_on_surface" format="color" />
+    <attr name="vctr_unread_background" format="color" />
+
+    <!-- FAB Label -->
+    <attr name="vctr_fab_label_bg" format="color" />
+    <color name="vctr_fab_label_bg_light">@android:color/white</color>
+    <color name="vctr_fab_label_bg_dark">@color/palette_black_950</color>
+    <color name="vctr_fab_label_bg_black">@color/palette_black_950</color>
+
+    <attr name="vctr_fab_label_stroke" format="color" />
+    <color name="vctr_fab_label_stroke_light">#1EFFFFFF</color>
+    <color name="vctr_fab_label_stroke_dark">@android:color/black</color>
+    <color name="vctr_fab_label_stroke_black">@android:color/black</color>
+
+    <attr name="vctr_fab_label_color" format="color" />
+    <color name="vctr_fab_label_color_light">@color/palette_black_900</color>
+    <color name="vctr_fab_label_color_dark">@color/palette_gray_250</color>
+    <color name="vctr_fab_label_color_black">@color/palette_gray_250</color>
+
+    <!-- Touch overlay -->
+    <attr name="vctr_touch_guard_bg" format="color" />
+    <color name="vctr_touch_guard_bg_light">#66000000</color>
+    <color name="vctr_touch_guard_bg_dark">#BF000000</color>
+    <color name="vctr_touch_guard_bg_black">#BF000000</color>
+
+    <!-- Widget banners -->
+    <attr name="vctr_room_active_widgets_banner_bg" format="color" />
+    <color name="vctr_room_active_widgets_banner_bg_light">@color/palette_gray_50</color>
+    <color name="vctr_room_active_widgets_banner_bg_dark">@color/palette_black_950</color>
+    <color name="vctr_room_active_widgets_banner_bg_black">@color/palette_black_950</color>
+
+    <attr name="vctr_room_active_widgets_banner_text" format="color" />
+    <color name="vctr_room_active_widgets_banner_text_light">@color/palette_gray_200</color>
+    <color name="vctr_room_active_widgets_banner_text_dark">@color/palette_gray_250</color>
+    <color name="vctr_room_active_widgets_banner_text_black">@color/palette_gray_250</color>
+
+    <!-- Waiting overlay -->
+    <attr name="vctr_waiting_background_color" format="color" />
+    <color name="vctr_waiting_background_color_light">#AAAAAAAA</color>
+    <color name="vctr_waiting_background_color_dark">#55555555</color>
+
+    <color name="vctr_disabled_view_color_light">#EEEEEE</color>
+
+    <!-- Reactions -->
+    <attr name="vctr_reaction_background_off" format="color" />
+    <color name="vctr_reaction_background_off_light">#FFF3F8FD</color>
+    <color name="vctr_reaction_background_off_dark">#22252B</color>
+    <color name="vctr_reaction_background_off_black">#22252B</color>
+
+    <attr name="vctr_reaction_background_on" format="color" />
+    <color name="vctr_reaction_background_on_light">#2011BC8A</color>
+    <color name="vctr_reaction_background_on_dark">#4011BC8A</color>
+    <color name="vctr_reaction_background_on_black">#4011BC8A</color>
+
+    <!-- Keys backup -->
+    <attr name="vctr_keys_backup_banner_accent_color" format="color" />
+    <color name="vctr_keys_backup_banner_accent_color_light">#F4FBEA</color>
+    <color name="vctr_keys_backup_banner_accent_color_dark">#22262E</color>
+
+    <!-- Chat snow -->
+    <attr name="vctr_chat_effect_snow_background" format="color" />
+    <color name="vctr_chat_effect_snow_background_light">@color/black_alpha</color>
+    <color name="vctr_chat_effect_snow_background_dark">@android:color/transparent</color>
+
+    <!-- Toasts -->
+    <attr name="vctr_toast_background" format="color" />
+    <color name="vctr_toast_background_light">@color/palette_black_900</color>
+    <color name="vctr_toast_background_dark">@color/palette_gray_400</color>
+
+    <!-- Presence Indicators -->
+    <attr name="vctr_presence_indicator_offline" format="color" />
+    <color name="vctr_presence_indicator_offline_light">@color/palette_gray_100</color>
+    <color name="vctr_presence_indicator_offline_dark">@color/palette_gray_450</color>
+
+    <attr name="vctr_presence_indicator_online" format="color" />
+    <color name="vctr_presence_indicator_online_light">@color/palette_ozchat_accent_light</color>
+    <color name="vctr_presence_indicator_online_dark">@color/palette_ozchat_accent_dark</color>
+
+    <attr name="vctr_presence_indicator_busy" format="color" />
+    <color name="vctr_presence_indicator_busy_light">@color/element_alert_light</color>
+    <color name="vctr_presence_indicator_busy_dark">@color/element_alert_dark</color>
+
+    <attr name="vctr_presence_indicator_away" format="color" />
+    <color name="vctr_presence_indicator_away_light">@color/palette_element_orange</color>
+    <color name="vctr_presence_indicator_away_dark">@color/palette_element_orange</color>
+
+    <!-- Location Sharing -->
+    <attr name="vctr_live_location" format="color" />
+    <color name="vctr_live_location_light">@color/palette_prune</color>
+    <color name="vctr_live_location_dark">@color/palette_prune</color>
+
+    <!-- Shield colors -->
+    <color name="shield_color_trust">#0DBD8B</color>
+    <color name="shield_color_trust_background">#0F0DBD8B</color>
+    <color name="shield_color_black">@color/palette_black_900</color>
+    <color name="shield_color_gray">#91A1C0</color>
+    <color name="shield_color_warning">@color/palette_melon</color>
+    <color name="shield_color_warning_background">#0FE53935</color>
+    <color name="shield_color_unknown">@color/palette_gray_200</color>
+
+    <!-- Badges -->
+    <attr name="vctr_badge_color_border" format="color" />
+    <color name="vctr_badge_color_border_light">@color/palette_white</color>
+    <color name="vctr_badge_color_border_dark">@color/palette_black_950</color>
+
+    <!-- WYSIWYG Editor -->
+    <attr name="vctr_rich_text_editor_menu_button_background" format="color" />
+    <color name="vctr_rich_text_editor_menu_button_background_light">@color/palette_ice</color>
+    <color name="vctr_rich_text_editor_menu_button_background_dark">@color/palette_black_800</color>
+
+    <!-- Critical UI tones -->
+    <attr name="vctr_bg_critical_subtle" format="color" />
+    <color name="vctr_bg_critical_subtle_light">#FFF7F6</color>
+    <color name="vctr_bg_critical_subtle_dark">#3E0000</color>
+
+    <attr name="vctr_border_critical_subtle" format="color" />
+    <color name="vctr_border_critical_subtle_light">#FFC5BC</color>
+    <color name="vctr_border_critical_subtle_dark">#710000</color>
+
+    <attr name="vctr_icon_critical_primary" format="color" />
+    <color name="vctr_icon_critical_primary_light">#D51928</color>
+    <color name="vctr_icon_critical_primary_dark">#FD3E3C</color>
+
+    <attr name="vctr_text_critical_primary" format="color" />
+    <color name="vctr_text_critical_primary_light">#D51928</color>
+    <color name="vctr_text_critical_primary_dark">#FD3E3C</color>
+
+    <attr name="vctr_text_primary" format="color" />
+    <color name="vctr_text_primary_light">@color/palette_black_900</color>
+    <color name="vctr_text_primary_dark">@color/palette_polly</color>
+
+</resources>

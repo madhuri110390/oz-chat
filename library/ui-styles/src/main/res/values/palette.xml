@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="UnusedResources">
+
+    <!--
+     Define all the colors used across the Element Android project
+     Source: https://www.figma.com/file/X4XTH9iS2KGJ2wFKDqkyed/Compound?node-id=1338%3A17947
+     Some colors are not used, but we want the palette to be complete so we ignore the lint error
+     UnusedResources for all the resources in this file
+    -->
+
+    <!-- For themes (Brown) -->
+    <color name="palette_ozchat_accent_light_brown">#FF7043</color>            <!-- Soft Ember -->
+    <color name="palette_ozchat_accent_dark_brown">#C97E5B</color>          <!-- Golden Ember -->
+    <color name="palette_ozchat_yellow_brown">#FFA726</color>          <!-- Warm Yellow -->
+    <color name="palette_ozchat_maroon_brown">#3A0E25</color>          <!-- Deep brand maroon -->
+    <color name="palette_ozchat_gradient_dark_brown">#1A0D0C</color>   <!-- Deepest shade (gradient base) -->
+
+    <!-- General palette reused in brown -->
+    <color name="palette_azure_brown">#29B6F6</color>                  <!-- Info tone -->
+    <color name="palette_kiwi_brown">#74D12C</color>                   <!-- Kept from original for legacy -->
+    <color name="palette_grape_brown">#880E4F</color>                  <!-- Deep rose for dark mode messages -->
+    <color name="palette_verde_brown">#66BB6A</color>                  <!-- Success / online -->
+    <color name="palette_polly_brown">#FFCCBC</color>                  <!-- Light accent on dark -->
+    <color name="palette_melon_brown">#E53935</color>                  <!-- Error tone -->
+    <color name="palette_red_brown">#B00020</color>                  <!-- Error tone -->
+
+    <color name="palette_element_green_brown">#4CAF50</color>          <!-- Slightly cooler green -->
+    <color name="palette_element_orange_brown">#FFCC80</color>         <!-- Used for warning icons -->
+    <color name="palette_white_brown">#FFFFFF</color>
+    <color name="palette_vermilion_brown">#EF5350</color>              <!-- Stronger alert red -->
+
+    <!-- Unused fallback but themed -->
+    <color name="palette_ems_brown">#7E69FF</color>
+    <color name="palette_aqua_brown">#4DD0E1</color>
+    <color name="palette_prune_brown">#9C27B0</color>
+    <color name="palette_links_brown">#42A5F5</color>
+
+    <!-- Light theme grays -->
+    <color name="palette_gray_25_brown">#FFF8F5</color>                <!-- OZ Ember background -->
+    <color name="palette_gray_50_brown">#FFEDE4</color>                <!-- OZ Ember surface -->
+    <color name="palette_gray_100_brown">#F5D2C5</color>               <!-- Lighter accent -->
+    <color name="palette_gray_150_brown">#C27C6C</color>               <!-- Soft dusty rose -->
+    <color name="palette_gray_200_brown">#6E3B3B</color>               <!-- Primary dark text on light -->
+    <color name="palette_black_900_brown">#3A0E25</color>              <!-- Main text base -->
+
+    <!-- Optional -->
+    <color name="palette_ice_brown">#FCE4EC</color>                    <!-- Outbound bubble light -->
+
+    <!-- Dark theme grays -->
+    <color name="palette_gray_250_brown">#FFCCBC</color>               <!-- Secondary text on dark -->
+    <color name="palette_gray_300_brown">#EF9A9A</color>
+    <color name="palette_gray_400_brown">#8D6E63</color>
+    <color name="palette_gray_450_brown">#5D4037</color>               <!-- Cocoa gray -->
+    <color name="palette_black_800_brown">#311B16</color>
+    <color name="palette_black_950_brown">#1A0D0C</color>              <!-- OZ Ember dark bg -->
+    <color name="palette_blue_ozChat_brown">#0A0E23</color>            <!-- Legacy night bg -->
+
+
+    <!-- For all themes -->
+    <color name="palette_ozchat_accent_light">#8EDBD0</color>            <!-- New Mint Accent -->
+    <color name="palette_ozchat_accent_dark">#009578</color>          <!-- Secondary Cool Tone -->
+    <color name="palette_ozchat_yellow">#E7F8F3</color>          <!-- Outbound Message Base -->
+    <color name="palette_ozchat_maroon">#21262C</color>          <!-- Inbound Message Base -->
+    <color name="palette_ozchat_gradient_dark">#0B1213</color>   <!-- Dark BG (Main Base) -->
+
+    <!-- For all themes -->
+    <color name="palette_azure">#4CB8D8</color>                  <!-- Info tone, fresh sky blue -->
+    <color name="palette_kiwi">#74D12C</color>                   <!-- Retained legacy green -->
+    <color name="palette_grape">#5C3B66</color>                  <!-- Dark plum for contrast -->
+    <color name="palette_verde">#66BB6A</color>                  <!-- Success / online -->
+    <color name="palette_polly">#CDEDE6</color>                  <!-- Light mint for dark -->
+    <color name="palette_melon">#E53935</color>                  <!-- Error tone -->
+    <color name="palette_red">#B00020</color>                  <!-- Error tone -->
+
+    <color name="palette_element_green">#009578</color>          <!-- New accent green -->
+    <color name="palette_element_orange">#FFCBA4</color>         <!-- Warning tone -->
+    <color name="palette_white">#FFFFFF</color>
+    <color name="palette_vermilion">#EF5350</color>              <!-- Alert red -->
+
+    <!-- Unused fallback but themed -->
+    <color name="palette_ems">#7E69FF</color>
+    <color name="palette_aqua">#B8EEE8</color>                   <!-- Synced with secondary -->
+    <color name="palette_prune">#9C27B0</color>
+    <color name="palette_links">#3BA7C9</color>                  <!-- Harmonized link tone -->
+
+    <!-- Light theme grays -->
+    <color name="palette_gray_25">#F9FBFC</color>                <!-- Lightest background -->
+    <color name="palette_gray_50">#E7EFF3</color>                <!-- Card surface -->
+    <color name="palette_gray_100">#D6F5F2</color>               <!-- Very soft aqua -->
+    <color name="palette_gray_150">#B8EEE8</color>               <!-- Soft dusty mint -->
+    <color name="palette_gray_200">#1C2E35</color>               <!-- Primary text -->
+    <color name="palette_black_900">#1A2A30</color>              <!-- Base dark text -->
+
+    <!-- Optional -->
+    <color name="palette_ice">#E7F8F3</color>                    <!-- Outbound bubble -->
+
+    <!-- Dark theme grays -->
+    <color name="palette_gray_250">#A9CFCB</color>               <!-- Secondary text on dark -->
+    <color name="palette_gray_300">#789D99</color>
+    <color name="palette_gray_400">#5F7572</color>
+    <color name="palette_gray_450">#3F4D4B</color>               <!-- Subdued cocoa gray -->
+    <color name="palette_black_800">#1B4741</color>              <!-- Deep accent dark -->
+    <color name="palette_black_950">#0B1213</color>              <!-- True dark BG -->
+    <color name="palette_blue_ozChat">#0A0E23</color>            <!-- Retained legacy dark bg -->
+
+</resources>

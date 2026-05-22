@@ -1,0 +1,304 @@
+Configuration on demand is an incubating feature.
+
+> Configure project :
+The Dependency Analysis plugin is only known to work with versions of AGP between 4.2.2 and 7.4.2. You are using 8.13.0. Proceed at your own risk.
+Is CI build: false
+
+> Configure project :vector
+WARNING: The option 'android.bundle.enableUncompressedNativeLibs' is deprecated.
+The current default is 'true'.
+It was removed in version 8.1 of the Android Gradle plugin.
+WARNING: The option setting 'android.jetifier.ignorelist=common-31.3.2' is experimental.
+WARNING: The option setting 'android.experimental.lint.version=9.0.0-alpha09' is experimental.
+
+> Task :matrix-sdk-android:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :library:ui-styles:preBuild UP-TO-DATE
+> Task :vector-config:preBuild UP-TO-DATE
+> Task :library:external:realmfieldnameshelper:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :library:external:dialpad:preBuild UP-TO-DATE
+> Task :matrix-sdk-android-flow:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :vector:preBuild UP-TO-DATE
+> Task :library:attachment-viewer:preBuild UP-TO-DATE
+> Task :library:core-utils:preBuild UP-TO-DATE
+> Task :matrix-sdk-android:preBuild UP-TO-DATE
+> Task :vector-config:preDebugBuild UP-TO-DATE
+> Task :matrix-sdk-android:preDebugBuild UP-TO-DATE
+> Task :library:ui-styles:preDebugBuild UP-TO-DATE
+> Task :library:external:dialpad:preDebugBuild UP-TO-DATE
+> Task :library:core-utils:preDebugBuild UP-TO-DATE
+> Task :vector-config:generateDebugResValues UP-TO-DATE
+> Task :library:external:dialpad:generateDebugResValues UP-TO-DATE
+> Task :vector-config:generateDebugResources UP-TO-DATE
+> Task :library:external:dialpad:generateDebugResources UP-TO-DATE
+> Task :vector-config:packageDebugResources UP-TO-DATE
+> Task :matrix-sdk-android-flow:preBuild UP-TO-DATE
+> Task :library:external:diff-match-patch:compileJava UP-TO-DATE
+> Task :library:external:dialpad:packageDebugResources UP-TO-DATE
+> Task :library:attachment-viewer:preDebugBuild UP-TO-DATE
+> Task :vector:preGplayModernDebugBuild UP-TO-DATE
+> Task :library:multipicker:preBuild UP-TO-DATE
+> Task :matrix-sdk-android:generateDebugBuildConfig UP-TO-DATE
+> Task :library:multipicker:preDebugBuild UP-TO-DATE
+> Task :vector:generateGplayModernDebugResValues UP-TO-DATE
+> Task :matrix-sdk-android:generateDebugResValues UP-TO-DATE
+> Task :library:external:diff-match-patch:processResources NO-SOURCE
+> Task :library:external:diff-match-patch:classes UP-TO-DATE
+> Task :vector:generateGplayModernDebugResources UP-TO-DATE
+> Task :matrix-sdk-android:generateDebugResources UP-TO-DATE
+> Task :library:external:diff-match-patch:jar UP-TO-DATE
+> Task :vector:packageGplayModernDebugResources UP-TO-DATE
+> Task :matrix-sdk-android:packageDebugResources UP-TO-DATE
+> Task :vector:processGplayModernDebugNavigationResources UP-TO-DATE
+> Task :library:multipicker:generateDebugResValues UP-TO-DATE
+> Task :library:multipicker:generateDebugResources UP-TO-DATE
+> Task :matrix-sdk-android-flow:preDebugBuild UP-TO-DATE
+> Task :matrix-sdk-android-flow:generateDebugResValues UP-TO-DATE
+> Task :library:core-utils:generateDebugResValues UP-TO-DATE
+> Task :vector-config:processDebugNavigationResources UP-TO-DATE
+> Task :vector:parseGplayModernDebugLocalResources UP-TO-DATE
+> Task :library:ui-strings:preBuild UP-TO-DATE
+> Task :library:ui-strings:preDebugBuild UP-TO-DATE
+> Task :library:external:autocomplete:preBuild UP-TO-DATE
+> Task :library:external:autocomplete:preDebugBuild UP-TO-DATE
+> Task :matrix-sdk-android-flow:generateDebugResources UP-TO-DATE
+> Task :library:external:dialpad:processDebugNavigationResources UP-TO-DATE
+> Task :library:core-utils:generateDebugResources UP-TO-DATE
+> Task :matrix-sdk-android:processDebugNavigationResources UP-TO-DATE
+> Task :library:ui-strings:generateDebugResValues UP-TO-DATE
+> Task :library:external:autocomplete:generateDebugResValues UP-TO-DATE
+> Task :vector-config:parseDebugLocalResources UP-TO-DATE
+> Task :vector:generateGplayModernDebugRFile UP-TO-DATE
+> Task :vector:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :library:ui-strings:generateDebugResources UP-TO-DATE
+> Task :matrix-sdk-android-flow:packageDebugResources UP-TO-DATE
+> Task :library:core-utils:packageDebugResources UP-TO-DATE
+> Task :library:core-utils:processDebugNavigationResources UP-TO-DATE
+> Task :matrix-sdk-android-flow:processDebugNavigationResources UP-TO-DATE
+> Task :matrix-sdk-android:parseDebugLocalResources UP-TO-DATE
+> Task :library:multipicker:packageDebugResources UP-TO-DATE
+> Task :library:ui-strings:packageDebugResources UP-TO-DATE
+> Task :library:ui-strings:processDebugNavigationResources UP-TO-DATE
+> Task :matrix-sdk-android-flow:parseDebugLocalResources UP-TO-DATE
+> Task :library:core-utils:parseDebugLocalResources UP-TO-DATE
+> Task :library:external:autocomplete:generateDebugResources UP-TO-DATE
+> Task :library:multipicker:processDebugNavigationResources UP-TO-DATE
+> Task :library:external:dialpad:parseDebugLocalResources UP-TO-DATE
+> Task :library:ui-strings:parseDebugLocalResources UP-TO-DATE
+> Task :matrix-sdk-android:generateDebugRFile UP-TO-DATE
+> Task :vector-config:generateDebugRFile UP-TO-DATE
+> Task :matrix-sdk-android-flow:generateDebugRFile UP-TO-DATE
+> Task :library:core-utils:generateDebugRFile UP-TO-DATE
+> Task :library:external:autocomplete:packageDebugResources UP-TO-DATE
+> Task :library:ui-strings:generateDebugRFile UP-TO-DATE
+> Task :library:external:dialpad:generateDebugRFile UP-TO-DATE
+> Task :library:external:jsonviewer:preBuild UP-TO-DATE
+> Task :library:external:jsonviewer:preDebugBuild UP-TO-DATE
+> Task :library:external:jsonviewer:generateDebugResValues UP-TO-DATE
+> Task :matrix-sdk-android-flow:javaPreCompileDebug UP-TO-DATE
+> Task :library:multipicker:parseDebugLocalResources UP-TO-DATE
+> Task :library:external:jsonviewer:generateDebugResources UP-TO-DATE
+> Task :library:external:autocomplete:processDebugNavigationResources UP-TO-DATE
+> Task :library:external:span:preBuild UP-TO-DATE
+> Task :library:external:barcodescanner:core:preBuild UP-TO-DATE
+> Task :library:external:span:preDebugBuild UP-TO-DATE
+> Task :library:external:span:generateDebugResValues UP-TO-DATE
+> Task :library:multipicker:generateDebugRFile UP-TO-DATE
+> Task :library:external:barcodescanner:core:preDebugBuild UP-TO-DATE
+> Task :library:external:span:generateDebugResources UP-TO-DATE
+> Task :vector-config:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :library:external:textdrawable:preBuild UP-TO-DATE
+> Task :library:external:textdrawable:preDebugBuild UP-TO-DATE
+> Task :library:external:barcodescanner:zxing:preBuild UP-TO-DATE
+> Task :library:external:barcodescanner:zxing:preDebugBuild UP-TO-DATE
+> Task :library:external:textdrawable:generateDebugResValues UP-TO-DATE
+> Task :library:external:barcodescanner:core:generateDebugResValues UP-TO-DATE
+> Task :library:external:barcodescanner:zxing:generateDebugResValues UP-TO-DATE
+> Task :library:external:autocomplete:parseDebugLocalResources UP-TO-DATE
+> Task :library:external:textdrawable:generateDebugResources UP-TO-DATE
+> Task :library:external:span:packageDebugResources UP-TO-DATE
+> Task :library:external:span:processDebugNavigationResources UP-TO-DATE
+> Task :library:external:autocomplete:generateDebugRFile UP-TO-DATE
+> Task :library:external:barcodescanner:zxing:generateDebugResources UP-TO-DATE
+> Task :library:external:textdrawable:packageDebugResources UP-TO-DATE
+> Task :library:external:textdrawable:processDebugNavigationResources UP-TO-DATE
+> Task :library:core-utils:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :library:external:jsonviewer:packageDebugResources UP-TO-DATE
+> Task :library:external:barcodescanner:core:generateDebugResources UP-TO-DATE
+> Task :library:external:textdrawable:parseDebugLocalResources UP-TO-DATE
+> Task :library:external:span:parseDebugLocalResources UP-TO-DATE
+> Task :library:external:jsonviewer:processDebugNavigationResources UP-TO-DATE
+> Task :library:external:barcodescanner:zxing:packageDebugResources UP-TO-DATE
+> Task :library:external:realmfieldnameshelper:compileKotlin UP-TO-DATE
+> Task :library:external:realmfieldnameshelper:compileJava NO-SOURCE
+> Task :library:external:barcodescanner:zxing:processDebugNavigationResources UP-TO-DATE
+> Task :library:external:jsonviewer:parseDebugLocalResources UP-TO-DATE
+> Task :library:external:realmfieldnameshelper:processResources UP-TO-DATE
+> Task :library:external:textdrawable:generateDebugRFile UP-TO-DATE
+> Task :library:external:realmfieldnameshelper:classes UP-TO-DATE
+> Task :library:external:dialpad:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :library:external:span:generateDebugRFile UP-TO-DATE
+> Task :library:external:barcodescanner:core:packageDebugResources UP-TO-DATE
+> Task :library:external:realmfieldnameshelper:jar UP-TO-DATE
+> Task :library:external:dialpad:compileDebugKotlin NO-SOURCE
+> Task :library:multipicker:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :library:external:barcodescanner:zxing:parseDebugLocalResources UP-TO-DATE
+> Task :library:external:jsonviewer:generateDebugRFile UP-TO-DATE
+> Task :library:external:barcodescanner:core:processDebugNavigationResources UP-TO-DATE
+> Task :library:ui-strings:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :library:external:dialpad:javaPreCompileDebug UP-TO-DATE
+> Task :library:multipicker:javaPreCompileDebug UP-TO-DATE
+> Task :library:external:autocomplete:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :library:external:jsonviewer:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :library:external:span:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :library:external:barcodescanner:zxing:generateDebugRFile UP-TO-DATE
+> Task :library:external:autocomplete:compileDebugKotlin NO-SOURCE
+> Task :library:external:autocomplete:javaPreCompileDebug UP-TO-DATE
+> Task :vector-config:compileDebugKotlin UP-TO-DATE
+> Task :vector-config:javaPreCompileDebug UP-TO-DATE
+> Task :library:external:barcodescanner:core:parseDebugLocalResources UP-TO-DATE
+> Task :vector-config:compileDebugJavaWithJavac NO-SOURCE
+> Task :vector-config:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :library:external:barcodescanner:core:generateDebugRFile UP-TO-DATE
+> Task :library:external:textdrawable:javaPreCompileDebug UP-TO-DATE
+> Task :library:external:span:compileDebugKotlin UP-TO-DATE
+> Task :library:external:span:javaPreCompileDebug UP-TO-DATE
+> Task :library:external:span:compileDebugJavaWithJavac NO-SOURCE
+> Task :library:external:span:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :library:external:textdrawable:compileDebugJavaWithJavac UP-TO-DATE
+> Task :library:external:barcodescanner:core:javaPreCompileDebug UP-TO-DATE
+> Task :library:external:textdrawable:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :library:external:barcodescanner:zxing:javaPreCompileDebug UP-TO-DATE
+> Task :vector-config:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :library:ui-strings:compileDebugKotlin UP-TO-DATE
+> Task :library:external:span:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :library:external:textdrawable:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :library:ui-strings:javaPreCompileDebug UP-TO-DATE
+> Task :library:ui-strings:compileDebugJavaWithJavac NO-SOURCE
+> Task :library:core-utils:compileDebugKotlin UP-TO-DATE
+> Task :library:ui-strings:templateStringDebugResourceLocator UP-TO-DATE
+> Task :library:core-utils:javaPreCompileDebug UP-TO-DATE
+> Task :library:core-utils:compileDebugJavaWithJavac NO-SOURCE
+> Task :library:ui-strings:templatesDebugIdentifier UP-TO-DATE
+> Task :library:core-utils:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :library:ui-strings:templateProviderDebugGenerateService UP-TO-DATE
+> Task :library:core-utils:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :library:ui-strings:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :library:ui-strings:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :library:external:jsonviewer:javaPreCompileDebug UP-TO-DATE
+> Task :library:external:jsonviewer:kspDebugKotlin SKIPPED
+> Task :library:external:barcodescanner:core:compileDebugJavaWithJavac UP-TO-DATE
+> Task :library:external:barcodescanner:core:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :library:external:autocomplete:compileDebugJavaWithJavac UP-TO-DATE
+> Task :library:external:barcodescanner:core:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :library:external:dialpad:compileDebugJavaWithJavac UP-TO-DATE
+> Task :library:external:autocomplete:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :library:external:autocomplete:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :library:attachment-viewer:dataBindingMergeDependencyArtifactsDebug UP-TO-DATE
+> Task :library:attachment-viewer:generateDebugResValues UP-TO-DATE
+> Task :library:attachment-viewer:generateDebugResources UP-TO-DATE
+> Task :library:attachment-viewer:packageDebugResources UP-TO-DATE
+> Task :library:attachment-viewer:processDebugNavigationResources UP-TO-DATE
+> Task :library:external:dialpad:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :library:external:dialpad:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :library:attachment-viewer:parseDebugLocalResources UP-TO-DATE
+> Task :library:external:barcodescanner:zxing:compileDebugJavaWithJavac UP-TO-DATE
+> Task :library:ui-styles:dataBindingMergeDependencyArtifactsDebug UP-TO-DATE
+> Task :library:external:barcodescanner:zxing:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :library:external:barcodescanner:zxing:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :library:attachment-viewer:generateDebugRFile UP-TO-DATE
+> Task :library:ui-styles:generateDebugResValues UP-TO-DATE
+> Task :library:attachment-viewer:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :library:ui-styles:generateDebugResources UP-TO-DATE
+> Task :library:attachment-viewer:javaPreCompileDebug UP-TO-DATE
+> Task :library:ui-styles:packageDebugResources UP-TO-DATE
+> Task :library:ui-styles:processDebugNavigationResources UP-TO-DATE
+> Task :library:ui-styles:parseDebugLocalResources UP-TO-DATE
+> Task :library:multipicker:compileDebugKotlin UP-TO-DATE
+> Task :library:multipicker:compileDebugJavaWithJavac NO-SOURCE
+> Task :library:multipicker:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :library:multipicker:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :library:ui-styles:dataBindingGenBaseClassesDebug UP-TO-DATE
+> Task :library:ui-styles:generateDebugRFile UP-TO-DATE
+> Task :library:external:jsonviewer:kaptGenerateStubsDebugKotlin UP-TO-DATE
+> Task :library:ui-styles:checkKotlinGradlePluginConfigurationErrors SKIPPED
+> Task :library:attachment-viewer:dataBindingGenBaseClassesDebug UP-TO-DATE
+> Task :library:ui-styles:compileDebugKotlin UP-TO-DATE
+> Task :library:ui-styles:javaPreCompileDebug UP-TO-DATE
+> Task :library:external:jsonviewer:kaptDebugKotlin UP-TO-DATE
+> Task :library:ui-styles:compileDebugJavaWithJavac UP-TO-DATE
+> Task :library:ui-styles:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :library:ui-styles:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :library:external:jsonviewer:compileDebugKotlin UP-TO-DATE
+> Task :library:attachment-viewer:compileDebugKotlin UP-TO-DATE
+> Task :library:external:jsonviewer:compileDebugJavaWithJavac UP-TO-DATE
+> Task :library:external:jsonviewer:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :library:attachment-viewer:compileDebugJavaWithJavac UP-TO-DATE
+> Task :library:external:jsonviewer:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :library:attachment-viewer:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :library:attachment-viewer:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :matrix-sdk-android:kspDebugKotlin UP-TO-DATE
+> Task :matrix-sdk-android:kaptGenerateStubsDebugKotlin UP-TO-DATE
+> Task :matrix-sdk-android:kaptDebugKotlin UP-TO-DATE
+> Task :matrix-sdk-android:compileDebugKotlin UP-TO-DATE
+> Task :matrix-sdk-android:javaPreCompileDebug UP-TO-DATE
+> Task :matrix-sdk-android:compileDebugJavaWithJavac UP-TO-DATE
+> Task :matrix-sdk-android:debugRealmAccessorsTransformer UP-TO-DATE
+> Task :matrix-sdk-android:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :matrix-sdk-android:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :matrix-sdk-android-flow:compileDebugKotlin UP-TO-DATE
+> Task :matrix-sdk-android-flow:compileDebugJavaWithJavac NO-SOURCE
+> Task :matrix-sdk-android-flow:bundleLibCompileToJarDebug UP-TO-DATE
+> Task :matrix-sdk-android-flow:bundleLibRuntimeToJarDebug UP-TO-DATE
+> Task :vector:dataBindingMergeDependencyArtifactsGplayModernDebug UP-TO-DATE
+> Task :vector:dataBindingGenBaseClassesGplayModernDebug UP-TO-DATE
+> Task :vector:generateGplayModernDebugBuildConfig UP-TO-DATE
+> Task :vector:kspGplayModernDebugKotlin UP-TO-DATE
+> Task :vector:kaptGenerateStubsGplayModernDebugKotlin UP-TO-DATE
+> Task :vector:kaptGplayModernDebugKotlin UP-TO-DATE
+> Task :vector:compileGplayModernDebugKotlin UP-TO-DATE
+> Task :vector:javaPreCompileGplayModernDebug UP-TO-DATE
+> Task :vector:compileGplayModernDebugJavaWithJavac UP-TO-DATE
+> Task :vector:transformGplayModernDebugClassesWithAsm UP-TO-DATE
+> Task :vector:bundleLibCompileToJarGplayModernDebug UP-TO-DATE
+> Task :vector:preGplayModernDebugUnitTestBuild UP-TO-DATE
+> Task :vector:generateGplayModernDebugUnitTestStubRFile UP-TO-DATE
+> Task :vector:kspGplayModernDebugUnitTestKotlin UP-TO-DATE
+> Task :vector:kaptGenerateStubsGplayModernDebugUnitTestKotlin UP-TO-DATE
+> Task :vector:kaptGplayModernDebugUnitTestKotlin UP-TO-DATE
+
+> Task :vector:compileGplayModernDebugUnitTestKotlin FAILED
+e: file:///home/codenia/Documents/Production%20Element%20Code/OZ-Chat_Prod/20251125_OZ-Chat_Android_App/OZ-Chat_Android_Dev/vector/src/test/java/im/vector/app/features/MemberListViewModelTest.kt:120:96 Variable 'fakeRoomSummary' must be initialized.
+e: file:///home/codenia/Documents/Production%20Element%20Code/OZ-Chat_Prod/20251125_OZ-Chat_Android_App/OZ-Chat_Android_Dev/vector/src/test/java/im/vector/app/features/MemberListViewModelTest.kt:126:41 Variable 'fakeRoomSummary' must be initialized.
+e: file:///home/codenia/Documents/Production%20Element%20Code/OZ-Chat_Prod/20251125_OZ-Chat_Android_App/OZ-Chat_Android_Dev/vector/src/test/java/im/vector/app/features/permalink/PermalinkHandlerTest.kt:35:33 'val' cannot be reassigned.
+e: file:///home/codenia/Documents/Production%20Element%20Code/OZ-Chat_Prod/20251125_OZ-Chat_Android_App/OZ-Chat_Android_Dev/vector/src/test/java/im/vector/app/features/permalink/PermalinkHandlerTest.kt:73:33 'val' cannot be reassigned.
+e: file:///home/codenia/Documents/Production%20Element%20Code/OZ-Chat_Prod/20251125_OZ-Chat_Android_App/OZ-Chat_Android_Dev/vector/src/test/java/im/vector/app/features/permalink/PermalinkHandlerTest.kt:73:47 Null cannot be a value of a non-null type 'FakeSession'.
+=============================== Gradle Doctor Prescriptions ============================================
+| The following operations were slower to pull from the cache than to rerun:                           |
+| :vector:dataBindingMergeDependencyArtifactsGplayModernDebug                                          |
+| Consider disabling caching them.                                                                     |
+| For more information see: https://runningcode.github.io/gradle-doctor/slower-from-cache/             |
+========================================================================================================
+
+[Incubating] Problems report is available at: file:///home/codenia/Documents/Production%20Element%20Code/OZ-Chat_Prod/20251125_OZ-Chat_Android_App/OZ-Chat_Android_Dev/build/reports/problems/problems-report.html
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':vector:compileGplayModernDebugUnitTestKotlin'.
+> A failure occurred while executing org.jetbrains.kotlin.compilerRunner.GradleCompilerRunnerWithWorkers$GradleKotlinCompilerWorkAction
+   > Compilation error. See log for more details
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights.
+> Get more help at https://help.gradle.org.
+
+Deprecated Gradle features were used in this build, making it incompatible with Gradle 9.0.
+
+You can use '--warning-mode all' to show the individual deprecation warnings and determine if they come from your own scripts or plugins.
+
+For more on this, please refer to https://docs.gradle.org/8.14.3/userguide/command_line_interface.html#sec:command_line_warnings in the Gradle documentation.
+
+BUILD FAILED in 6s
+195 actionable tasks: 1 executed, 194 up-to-date

@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    tools:viewBindingIgnore="true">
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/messageImageCard"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="4dp"
+        app:cardCornerRadius="12dp"
+        app:strokeWidth="2dp"
+        app:strokeColor="?attr/vctr_message_bubble_inbound"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toEndOf="parent">
+
+        <ImageView
+            android:id="@+id/messageThumbnailView"
+            android:layout_width="375dp"
+            android:layout_height="wrap_content"
+            android:layout_margin="2dp"
+            android:adjustViewBounds="true"
+            android:scaleType="centerCrop"
+            android:contentDescription="@string/a11y_image"
+            tools:layout_height="300dp"
+            tools:src="@tools:sample/backgrounds/scenic" />
+    </com.google.android.material.card.MaterialCardView>
+
+
+    <ImageView
+        android:id="@+id/messageMediaPlayView"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
+        android:contentDescription="@string/action_play"
+        android:src="@drawable/ic_material_play_circle"
+        app:tint="@android:color/white"
+        android:elevation="4dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toBottomOf="@id/messageImageCard"
+        app:layout_constraintEnd_toEndOf="@id/messageImageCard"
+        app:layout_constraintStart_toStartOf="@id/messageImageCard"
+        app:layout_constraintTop_toTopOf="@id/messageImageCard"
+        tools:visibility="visible" />
+
+    <include
+        android:id="@+id/messageMediaUploadProgressLayout"
+        layout="@layout/media_upload_download_progress_layout"
+        android:layout_width="0dp"
+        android:layout_height="46dp"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="32dp"
+        android:layout_marginBottom="8dp"
+        android:visibility="gone"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/messageImageCard"
+        tools:visibility="visible" />
+</androidx.constraintlayout.widget.ConstraintLayout>

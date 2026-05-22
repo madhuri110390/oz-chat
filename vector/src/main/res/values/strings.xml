@@ -1,0 +1,13 @@
+<resources>
+
+    <!-- Unified Permissions -->
+    <string name="unified_permissions_title">App Permissions Required</string>
+    <string name="unified_permissions_message">To provide the best experience like receiving calls and messages reliably, the app requires basic permissions (Camera, Microphone, Notifications) and advanced permissions (Display over Apps, Disable Battery Optimization) to be granted.</string>
+    <string name="unified_permissions_denied_warning">App notifications and calls may not work properly without these permissions. You can further allow them in Settings.</string>
+    <string name="advanced_notification_settings_title">Advanced Notifications</string>
+    <string name="advanced_notification_settings_message">Please ensure all notification options like \"Lock screen\", \"Allow badges\", and \"Pop on screen\" are enabled for the best experience.</string>
+    <string name="call_notification_screen_sharing_stop">Stop Sharing</string>
+    <string name="hello_blank_fragment">User Status</string>
+    <string name="invite_friends_text">Connect with me on OZ Chat — the fastest and most secure way to stay in touch! 🔐\n\nClick here to join: https://openzippers.com/register?uname=%1$s\n\nDownload OZ Chat: https://play.google.com/store/apps/details?id=com.openzipper.ozchat</string>
+    <string name="call_reconnecting">Call Reconnecting</string>
+</resources>

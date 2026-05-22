@@ -1,0 +1,154 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <com.google.android.material.appbar.AppBarLayout
+        android:id="@+id/appBarLayout"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        app:layout_constraintTop_toTopOf="parent">
+
+        <com.google.android.material.appbar.MaterialToolbar
+            android:id="@+id/userListToolbar"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="24dp"
+            android:paddingEnd="@dimen/layout_horizontal_margin"
+            app:title="@string/fab_menu_create_chat"
+            tools:ignore="RtlSymmetry">
+
+            <LinearLayout
+                android:id="@+id/friendsConnectionLayout"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:orientation="horizontal"
+                android:gravity="center_vertical">
+
+                <!-- Main Icon: Toggles view of Followers/Following options -->
+                <ImageButton
+                    android:id="@+id/btnConnections"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:src="@drawable/ic_person_add"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:contentDescription="Connections"
+                    app:tint="?attr/colorControlNormal" />
+
+                <!-- Followers Icon -->
+                <ImageButton
+                    android:id="@+id/btnFollowers"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:src="@drawable/ic_followers"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:visibility="visible"
+                    android:contentDescription="Followers"
+                    app:tint="?attr/colorControlNormal" />
+
+                <!-- Following Icon -->
+                <ImageButton
+                    android:id="@+id/btnFollowing"
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:src="@drawable/ic_following"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:visibility="visible"
+                    android:contentDescription="Following"
+                    app:tint="?attr/colorControlNormal" />
+
+            </LinearLayout>
+
+        </com.google.android.material.appbar.MaterialToolbar>
+
+    </com.google.android.material.appbar.AppBarLayout>
+
+    <im.vector.app.core.platform.MaxHeightScrollView
+        android:id="@+id/chipGroupScrollView"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/layout_horizontal_margin"
+        android:layout_marginTop="8dp"
+        android:layout_marginEnd="@dimen/layout_horizontal_margin"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/appBarLayout"
+        app:maxHeight="64dp">
+
+        <com.google.android.material.chip.ChipGroup
+            android:id="@+id/chipGroup"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            app:lineSpacing="2dp" />
+
+    </im.vector.app.core.platform.MaxHeightScrollView>
+
+
+
+
+    <!-- TextInputLayout with Prefix and Suffix -->
+    <com.google.android.material.textfield.TextInputLayout
+        android:id="@+id/userListSearchLayout"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/layout_horizontal_margin"
+        android:layout_marginEnd="@dimen/layout_horizontal_margin"
+        android:hint="@string/user_directory_search_hint_2"
+        app:boxBackgroundMode="none"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/chipGroupScrollView">
+
+        <com.google.android.material.textfield.TextInputEditText
+            android:id="@+id/userListSearch"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:drawablePadding="8dp"
+            android:gravity="center_vertical"
+            android:importantForAutofill="no"
+            android:inputType="text"
+            android:maxHeight="80dp"
+            android:paddingTop="16dp"
+            android:paddingBottom="16dp"/>
+
+    </com.google.android.material.textfield.TextInputLayout>
+
+    <View
+        android:id="@+id/userListFilterDivider"
+        android:layout_width="0dp"
+        android:layout_height="1dp"
+        android:background="?vctr_list_separator"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/userListSearchLayout" />
+
+    <TextView
+        android:id="@+id/userListE2EbyDefaultDisabled"
+        style="@style/Widget.Vector.TextView.Body"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:drawablePadding="8dp"
+        android:textColor="?vctr_content_secondary"
+        android:visibility="gone"
+        app:layout_constraintTop_toBottomOf="@id/userListFilterDivider"
+        tools:visibility="visible" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/userListRecyclerView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:fastScrollEnabled="true"
+        android:overScrollMode="always"
+        android:scrollbars="vertical"
+        app:layout_behavior="@string/appbar_scrolling_view_behavior"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/userListE2EbyDefaultDisabled"
+        tools:listitem="@layout/item_known_user" />
+
+</androidx.constraintlayout.widget.ConstraintLayout>

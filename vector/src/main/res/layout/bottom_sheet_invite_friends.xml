@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bg_bottom_sheet_rounded"
+    android:padding="24dp">
+
+    <View
+        android:id="@+id/bottomSheetHandle"
+        android:layout_width="40dp"
+        android:layout_height="4dp"
+        android:background="?vctr_content_secondary"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <TextView
+        android:id="@+id/inviteFriendsTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="16dp"
+        android:text="@string/invite_friends"
+        android:textAppearance="@style/TextAppearance.Vector.Title1"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/bottomSheetHandle" />
+
+    <TextView
+        android:id="@+id/inviteFriendsDescription"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="8dp"
+        android:text="@string/invite_friends_desc"
+        android:textAppearance="@style/TextAppearance.Vector.Body"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/inviteFriendsTitle" />
+
+    <com.google.android.material.button.MaterialButton
+        android:id="@+id/inviteContactsButton"
+        style="@style/Widget.Vector.Button.Text"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="24dp"
+        android:gravity="start|center_vertical"
+        android:text="@string/invite_friends"
+        app:icon="@drawable/ic_user"
+        app:layout_constraintTop_toBottomOf="@id/inviteFriendsDescription" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="16dp"
+        android:gravity="center"
+        app:layout_constraintTop_toBottomOf="@id/inviteContactsButton" >
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/inviteWhatsAppButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:gravity="start|center_vertical"
+            android:text="Invite via WhatsApp"
+            app:cornerRadius="16dp"
+            app:iconTint="#25D366"
+            app:icon="@drawable/ic_whatsapp" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/inviteInstagramButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="8dp"
+            android:gravity="start|center_vertical"
+            android:text="Invite via Instagram"
+            app:cornerRadius="16dp"
+            app:iconTint="#E1306C"
+            app:icon="@drawable/ic_instagram" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/inviteFacebookButton"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:gravity="start|center_vertical"
+            android:text="Invite via Facebook"
+            app:cornerRadius="16dp"
+            app:iconTint="#1877F2"
+            app:icon="@drawable/ic_facebook" />
+    </LinearLayout>
+
+</androidx.constraintlayout.widget.ConstraintLayout>

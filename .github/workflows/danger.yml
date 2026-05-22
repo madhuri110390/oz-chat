@@ -1,0 +1,25 @@
+name: Danger CI
+
+on:
+  pull_request_target:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Danger
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # Needed so Danger can see all commits
+      - run: npm install --save-dev @babel/plugin-transform-flow-strip-types
+      - name: Run Danger
+        uses: danger/danger-js@11.2.6
+        with:
+          args: "--dangerfile ./tools/danger/dangerfile.js"
+        env:
+          DANGER_GITHUB_API_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,107 @@
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:padding="2dp"
+    tools:viewBindingIgnore="true">
+
+    <!-- Horizontal row: Avatar + Text content -->
+    <LinearLayout
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
+
+        <!-- Avatar (unchanged ID, compact size) -->
+        <ImageView
+            android:id="@+id/itemCallCreatorAvatar"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:layout_marginEnd="8dp"
+            android:importantForAccessibility="no"
+            tools:src="@sample/user_round_avatars" />
+
+        <!-- Vertical stack: Name + Status -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <!-- Name (unchanged ID) -->
+            <TextView
+                android:id="@+id/itemCallCreatorNameTextView"
+                style="@style/Widget.Vector.TextView.Subtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="?vctr_content_primary"
+                android:textStyle="bold"
+                tools:text="@sample/users.json/data/displayName" />
+
+            <!-- Status (unchanged ID) -->
+            <TextView
+                android:id="@+id/itemCallStatusTextView"
+                style="@style/Widget.Vector.TextView.Body"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="2dp"
+                android:drawablePadding="6dp"
+                android:maxLines="3"
+                android:textColor="?vctr_content_secondary"
+                tools:drawableLeft="@drawable/ic_missed_voice_call"
+                tools:text="@string/call_tile_voice_missed" />
+
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Call Accept/Reject Buttons (unchanged IDs) -->
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/itemCallAcceptRejectViewGroup"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginTop="4dp">
+
+        <Button
+            android:id="@+id/itemCallAcceptView"
+            style="@style/Widget.Vector.Button.Positive"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="2dp"
+            android:minWidth="96dp"
+            android:backgroundTint="@color/element_accent_dark"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintHorizontal_chainStyle="packed"
+            app:layout_constraintStart_toEndOf="@id/itemCallRejectView"
+            app:layout_constraintTop_toTopOf="@id/itemCallRejectView"
+            tools:text="@string/action_join" />
+
+        <Button
+            android:id="@+id/itemCallRejectView"
+            style="@style/Widget.Vector.Button.Destructive"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="2dp"
+            android:minWidth="96dp"
+            app:layout_constraintEnd_toStartOf="@id/itemCallAcceptView"
+            app:layout_constraintHorizontal_chainStyle="packed"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            tools:text="@string/action_ignore" />
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <!-- Time (unchanged ID) -->
+    <TextView
+        android:id="@+id/callTimeView"
+        style="@style/Widget.Vector.TextView.Caption"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="end"
+        android:layout_marginTop="4dp"
+        android:layout_marginEnd="2dp"
+        android:layout_marginBottom="2dp"
+        android:textColor="?attr/vctr_content_secondary"
+        tools:text="12:30 PM" />
+
+</LinearLayout>

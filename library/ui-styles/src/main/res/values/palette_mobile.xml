@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Alias to the palette colors
+      Source: https://www.figma.com/file/X4XTH9iS2KGJ2wFKDqkyed/Compound?node-id=1521%3A23026 -->
+
+    <color name="element_accent_light">@color/palette_ozchat_accent_light</color>         <!-- #FF7043 -->
+    <color name="element_accent_dark">@color/palette_ozchat_accent_dark</color>        <!-- #FFB74D (softer in dark mode) -->
+
+    <color name="element_alert_light">@color/palette_melon</color>        <!-- #FFB74D -->
+    <color name="element_alert_dark">@color/palette_ozchat_accent_dark</color>        <!-- #FFCC80 -->
+
+    <color name="element_link_light">@color/palette_links</color>                 <!-- #42A5F5 -->
+    <color name="element_link_dark">@color/palette_ozchat_accent_dark</color>                  <!-- #29B6F6 -->
+
+    <!-- attr for content colors -->
+    <attr name="vctr_content_primary" format="color" />
+    <attr name="vctr_content_secondary" format="color" />
+    <attr name="vctr_content_tertiary" format="color" />
+    <attr name="vctr_content_quaternary" format="color" />
+    <attr name="vctr_content_quinary" format="color" />
+
+    <!-- Light Mode -->
+    <color name="element_content_primary_light">@color/palette_black_900</color>         <!-- #3A0E25 -->
+    <color name="element_content_secondary_light">@color/palette_gray_200</color>        <!-- #6E3B3B -->
+    <color name="element_content_tertiary_light">@color/palette_gray_150</color>         <!-- #C27C6C -->
+    <color name="element_content_quaternary_light">@color/palette_gray_100</color>       <!-- #F5D2C5 -->
+    <color name="element_content_quinary_light">@color/palette_gray_50</color>           <!-- #FFEDE4 -->
+
+    <!-- Dark Mode -->
+    <color name="element_content_primary_dark">@color/palette_white</color>              <!-- #FFFFFF -->
+    <color name="element_content_secondary_dark">@color/palette_gray_250</color>         <!-- #FFCCBC -->
+    <color name="element_content_tertiary_dark">@color/palette_gray_300</color>          <!-- #EF9A9A -->
+    <color name="element_content_quaternary_dark">@color/palette_gray_400</color>        <!-- #8D6E63 -->
+    <color name="element_content_quinary_dark">@color/palette_gray_450</color>           <!-- #5D4037 -->
+
+    <!-- System backgrounds -->
+    <attr name="vctr_system" format="color" />
+    <color name="element_system_light">@color/palette_gray_25</color>                    <!-- #FFF8F5 -->
+    <color name="element_system_dark">@color/palette_black_950</color>                   <!-- #1A0D0C -->
+
+    <color name="element_background_light">@color/palette_white</color>
+    <color name="element_background_dark">@color/palette_blue_ozChat</color>
+    <color name="element_background_black">@android:color/black</color>
+
+    <!-- Decorative / name-based colors -->
+    <color name="element_name_01">@color/palette_azure</color>     <!-- #29B6F6 -->
+    <color name="element_name_02">@color/palette_grape</color>     <!-- #880E4F -->
+    <color name="element_name_03">@color/palette_verde</color>     <!-- #66BB6A -->
+    <color name="element_name_04">@color/palette_polly</color>     <!-- #FFCCBC -->
+    <color name="element_name_05">@color/palette_melon</color>     <!-- #E53935 -->
+    <color name="element_name_06">@color/palette_aqua</color>      <!-- #4DD0E1 -->
+    <color name="element_name_07">@color/palette_prune</color>     <!-- #9C27B0 -->
+    <color name="element_name_08">@color/palette_kiwi</color>      <!-- #74D12C -->
+
+    <!-- Room avatars -->
+    <color name="element_room_01">@color/palette_verde</color>
+    <color name="element_room_02">@color/palette_azure</color>
+    <color name="element_room_03">@color/palette_grape</color>
+</resources>
