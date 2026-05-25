@@ -128,7 +128,7 @@
 
                 <data
                     android:scheme="https"
-                    android:host="openzipper.com"
+                    android:host="openzippers.com"
                     android:pathPrefix="/ozchat"/>
             </intent-filter>
         </activity>
@@ -263,26 +263,17 @@
                     android:host="ozchat.page.link"
                     android:pathPattern=".*" />
             </intent-filter>
+
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
-
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
-
                 <data
                     android:scheme="https"
                     android:host="openzippers.com"
                     android:pathPrefix="/oz-chat" />
             </intent-filter>
-<!--            <intent-filter android:autoVerify="true">-->
-<!--                <action android:name="android.intent.action.VIEW" />-->
-<!--                <category android:name="android.intent.category.DEFAULT" />-->
-<!--                <category android:name="android.intent.category.BROWSABLE" />-->
-<!--                <data-->
-<!--                    android:scheme="https"-->
-<!--                    android:host="openzipper.com"-->
-<!--                    android:pathPrefix="/ozchat" />-->
-<!--            </intent-filter>-->
+
         </activity>
 
         <!-- Activity alias for matrix.to or element permalinks -->
@@ -458,28 +449,16 @@
                 <action android:name="android.intent.action.MEDIA_BUTTON" />
             </intent-filter>
         </service>
-        <service
-            android:name=".core.services.VectorSyncAndroidService"
-            android:enabled="true"
-            android:exported="false"
-            android:stopWithTask="false"
-            tools:ignore="Instantiatable" />
 
-        <!-- Add tools:ignore="Instantiatable" for the error reported only by CI and for lintGplayRelease check :/ -->
-<!--        <service-->
-<!--            android:name=".core.services.VectorSyncAndroidService"-->
-<!--            android:exported="false"-->
-<!--            android:stopWithTask="false"-->
-<!--            tools:ignore="Instantiatable" />-->
 
-        <!--        <service-->
-        <!--            android:name=".features.call.telecom.VectorConnectionAndroidService"-->
-        <!--            android:exported="false"-->
-        <!--            android:permission="android.permission.BIND_TELECOM_CONNECTION_SERVICE">-->
-        <!--            <intent-filter>-->
-        <!--                <action android:name="android.telecom.ConnectionService" />-->
-        <!--            </intent-filter>-->
-        <!--        </service>-->
+                <service
+                    android:name=".features.call.telecom.VectorConnectionAndroidService"
+                    android:exported="false"
+                    android:permission="android.permission.BIND_TELECOM_CONNECTION_SERVICE">
+                    <intent-filter>
+                        <action android:name="android.telecom.ConnectionService" />
+                    </intent-filter>
+                </service>
 
 
         <service

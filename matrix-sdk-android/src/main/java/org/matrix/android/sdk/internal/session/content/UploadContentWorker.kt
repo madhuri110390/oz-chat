@@ -167,7 +167,7 @@ internal class UploadContentWorker(val context: Context, params: WorkerParameter
                         filesToDelete.add(compressedFile)
                     }
                 }
-                attachment.type == ContentAttachmentData.Type.VIDEO &&
+               attachment.type == ContentAttachmentData.Type.VIDEO &&
                         attachment.mimeType != MimeTypes.Gif &&
                         params.compressBeforeSending -> {
                     val result = videoCompressor.compress(workingFile, object : ProgressListener {
@@ -198,6 +198,8 @@ internal class UploadContentWorker(val context: Context, params: WorkerParameter
                         else -> workingFile
                     }
                 }
+                attachment.type == ContentAttachmentData.Type.VIDEO &&
+
                 attachment.type == ContentAttachmentData.Type.IMAGE && !params.compressBeforeSending -> {
                     imageExitTagRemover.removeSensitiveJpegExifTags(workingFile).also {
                         filesToDelete.add(it)

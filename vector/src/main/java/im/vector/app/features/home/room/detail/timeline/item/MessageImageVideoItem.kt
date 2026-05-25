@@ -8,6 +8,7 @@
 package im.vector.app.features.home.room.detail.timeline.item
 
 import android.content.res.ColorStateList
+import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
@@ -80,7 +81,13 @@ abstract class MessageImageVideoItem : AbsMessageItem<MessageImageVideoItem.Hold
         val isImageMessage = attributes.informationData.messageType in listOf(MessageType.MSGTYPE_IMAGE, MessageType.MSGTYPE_STICKER_LOCAL)
         val autoplayAnimatedImages = attributes.autoplayAnimatedImages
 
+        holder.playContentView.setOnClickListener {
+            clickListener?.invoke(holder.imageView)
+        }
 
+        holder.imageView.setOnClickListener {
+            Log.e("VIDEO_DEBUG", "IMAGE CLICKED")
+        }
         holder.playContentView.visibility = if (playable && isImageMessage && autoplayAnimatedImages) {
             View.GONE
         } else if (playable) {

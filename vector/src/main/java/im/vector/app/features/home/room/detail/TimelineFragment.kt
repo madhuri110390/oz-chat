@@ -1554,6 +1554,10 @@ class TimelineFragment :
                     // Voice messages play inline via MessageVoiceItem — do not open the system audio player.
                     return
                 }
+                if (messageContent is MessageVideoContent) {
+                    // Video messages play inline via MessageVideoItem — do not open the system video player.
+                    return
+                }
                 val action = RoomDetailAction.DownloadOrOpen(informationData.eventId, informationData.senderId, messageContent)
                 timelineViewModel.handle(action)
             }
