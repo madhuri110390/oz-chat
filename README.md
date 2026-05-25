@@ -1,6 +1,6 @@
 # OZ-Chat
 
-OZ-Chat is a private, enterprise-grade Android Matrix client belonging to **OpenZippers** and developed/maintained by **Bhavuk Rajput** at **Codenia LLP**.  
+OZ-Chat is a private, enterprise-grade Android Matrix client belonging to **OpenZippers** and developed/maintained by **Madhuri Sharma** at **Codenia LLP**.  
 It is designed exclusively for internal use within OpenZippers and is **not open to public contributions, redistribution, or external use**.
 
 ---
@@ -8,7 +8,7 @@ It is designed exclusively for internal use within OpenZippers and is **not open
 ## Ownership & Maintenance
 
 - **Owner:** OpenZippers
-- **Maintained by:** Bhavuk Rajput (Codenia LLP)
+- **Maintained by:** Madhuri Sharma (Codenia LLP)
 - **Core Technology:** Matrix protocol (real-time communication)
 - **Primary Audience:** OpenZippers internal teams and authorized partners
 
@@ -96,7 +96,7 @@ bundle exec fastlane deploy_internal
 ### Copyright & License
 
 ## Copyright (c) 2025 OpenZippers
-# Maintained by Bhavuk Rajput, Codenia Technologies LLP
+# Maintained by Madhuri Sharma, Codenia Technologies LLP
 
 This software is licensed under the GNU Affero General Public License (AGPL-3.0-only).
 
