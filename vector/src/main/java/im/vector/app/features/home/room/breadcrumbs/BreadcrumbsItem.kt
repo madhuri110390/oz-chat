@@ -40,7 +40,9 @@ abstract class BreadcrumbsItem : VectorEpoxyModel<BreadcrumbsItem.Holder>(R.layo
         holder.rootView.onClick(itemClickListener)
         holder.unreadIndentIndicator.isVisible = hasUnreadMessage
         avatarRenderer.render(matrixItem, holder.avatarImageView)
-        holder.avatarImageView.contentDescription = matrixItem.getBestName()
+        holder.avatarImageView.contentDescription = matrixItem.id
+                .removePrefix("@")
+                .substringBefore(":")
         holder.unreadCounterBadgeView.render(UnreadCounterBadgeView.State.Count(unreadNotificationCount, showHighlighted))
         holder.draftIndentIndicator.isVisible = hasDraft
         holder.typingIndicator.isVisible = hasTypingUsers

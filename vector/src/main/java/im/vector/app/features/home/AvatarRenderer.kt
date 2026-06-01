@@ -323,14 +323,20 @@ fun getPlaceholderDrawable(matrixItem: MatrixItem): Drawable {
         if (isImportantForAccessibility.not()) return
         when (matrixItem) {
             is MatrixItem.SpaceItem -> {
-                contentDescription = stringProvider.getString(CommonStrings.avatar_of_space, matrixItem.getBestName())
+                contentDescription = stringProvider.getString(CommonStrings.avatar_of_space, matrixItem.id
+                        .removePrefix("@")
+                        .substringBefore(":"))
             }
             is MatrixItem.RoomAliasItem,
             is MatrixItem.RoomItem -> {
-                contentDescription = stringProvider.getString(CommonStrings.avatar_of_room, matrixItem.getBestName())
+                contentDescription = stringProvider.getString(CommonStrings.avatar_of_room, matrixItem.id
+                        .removePrefix("@")
+                        .substringBefore(":"))
             }
             is MatrixItem.UserItem -> {
-                contentDescription = stringProvider.getString(CommonStrings.avatar_of_user, matrixItem.getBestName())
+                contentDescription = stringProvider.getString(CommonStrings.avatar_of_user, matrixItem.id
+                        .removePrefix("@")
+                        .substringBefore(":"))
             }
             is MatrixItem.EveryoneInRoomItem,
             is MatrixItem.EventItem -> {

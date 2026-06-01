@@ -41,7 +41,9 @@ abstract class UserItem : VectorEpoxyModel<UserItem.Holder>(R.layout.item_user) 
         holder.root.onClick(itemClickAction)
 
         avatarRenderer.render(matrixItem, holder.avatarImage)
-        val bestName = matrixItem.getBestName()
+        val bestName = matrixItem.id
+                .removePrefix("@")
+                .substringBefore(":")
         holder.userIdText.setTextOrHide(bestName)
         holder.displayNameText.visibility = View.GONE
     }

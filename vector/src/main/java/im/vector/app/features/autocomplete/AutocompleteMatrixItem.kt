@@ -32,7 +32,9 @@ abstract class AutocompleteMatrixItem : VectorEpoxyModel<AutocompleteMatrixItem.
     override fun bind(holder: Holder) {
         super.bind(holder)
         holder.view.onClick(clickListener)
-        holder.nameView.text = matrixItem.getBestName()
+        holder.nameView.text = matrixItem.id
+                .removePrefix("@")
+                .substringBefore(":")
         if (subName?.startsWith("@") == true) {
             holder.subNameView.visibility = android.view.View.GONE
         } else {

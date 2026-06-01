@@ -57,7 +57,9 @@ abstract class PublicRoomItem : VectorEpoxyModel<PublicRoomItem.Holder>(R.layout
         holder.rootView.onClick(globalListener)
 
         avatarRenderer.render(matrixItem, holder.avatarView)
-        holder.nameView.text = matrixItem.getBestName()
+        holder.nameView.text = matrixItem.id
+                .removePrefix("@")
+                .substringBefore(":")
         val cleanAlias = roomAlias?.let {
             val name = if (it.contains(":")) it.substring(0, it.indexOf(":")) else it
             name.removePrefix("/profile/")

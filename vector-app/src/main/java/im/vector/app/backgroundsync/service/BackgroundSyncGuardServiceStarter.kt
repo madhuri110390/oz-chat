@@ -8,8 +8,6 @@
 package im.vector.app.backgroundsync.service
 
 import android.content.Context
-import android.content.Intent
-import androidx.core.content.ContextCompat
 import im.vector.app.core.services.GuardServiceStarter
 import im.vector.app.features.settings.VectorPreferences
 import timber.log.Timber
@@ -22,18 +20,12 @@ class BackgroundSyncGuardServiceStarter @Inject constructor(
 
     override fun start() {
         if (preferences.isBackgroundSyncEnabled()) {
-            try {
-                Timber.i("## Sync: starting GuardService")
-                val intent = Intent(appContext, GuardAndroidService::class.java)
-                ContextCompat.startForegroundService(appContext, intent)
-            } catch (ex: Throwable) {
-                Timber.e("## Sync: ERROR starting GuardService")
-            }
+            // Android 14+ / Play policy: do not keep process alive using a foreground service.
+            Timber.i("## Sync: GuardService disabled (FGS policy)")
         }
     }
 
     override fun stop() {
-        val intent = Intent(appContext, GuardAndroidService::class.java)
-        appContext.stopService(intent)
+        // No-op: guard foreground service is disabled.
     }
 }

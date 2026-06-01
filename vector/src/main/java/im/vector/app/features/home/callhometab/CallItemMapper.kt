@@ -45,7 +45,9 @@ class CallItemMapper @Inject constructor(
 
         return CallScreenItem(
                 userId = otherUserId,
-                userName = matrixItem.getBestName(),
+                userName = matrixItem.id
+                        .removePrefix("@")
+                        .substringBefore(":"),
                 callKind = callKind,
                 callStatus = callStatus,
                 resolvedAvatarUrl = resolvedAvatarUrl,

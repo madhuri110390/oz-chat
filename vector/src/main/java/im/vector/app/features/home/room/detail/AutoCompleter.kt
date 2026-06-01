@@ -234,7 +234,9 @@ class AutoCompleter @AssistedInject constructor(
             return
         }
 
-        val linkText: String = matrixItem.getBestName()
+        val linkText: String = matrixItem.id
+                .removePrefix("@")
+                .substringBefore(":")
 
         editorEditText.insertMentionAtSuggestion(url = permalink, text = linkText)
     }
@@ -253,7 +255,9 @@ class AutoCompleter @AssistedInject constructor(
         }
 
         // Replace the word by its completion
-        val displayName = matrixItem.getBestName()
+        val displayName = matrixItem.id
+                .removePrefix("@")
+                .substringBefore(":")
 
         // Adding trailing space " " or ": " if the user started mention someone
         val displayNameSuffix =

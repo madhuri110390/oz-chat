@@ -36,7 +36,9 @@ abstract class RoomManageSelectionItem : VectorEpoxyModel<RoomManageSelectionIte
         super.bind(holder)
         avatarRenderer.render(matrixItem, holder.avatarImageView)
 
-        holder.titleText.text = matrixItem.getBestName()
+        holder.titleText.text = matrixItem.id
+                .removePrefix("@")
+                .substringBefore(":")
 
         if (selected) {
             holder.checkboxImage.setImageDrawable(ContextCompat.getDrawable(holder.view.context, R.drawable.ic_checkbox_on))

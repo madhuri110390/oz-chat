@@ -49,10 +49,14 @@ abstract class RecentRoomItem : VectorEpoxyModel<RecentRoomItem.Holder>(R.layout
         }
 
         avatarRenderer.render(matrixItem, holder.avatarImageView)
-        holder.avatarImageView.contentDescription = matrixItem.getBestName()
+        holder.avatarImageView.contentDescription = matrixItem.id
+                .removePrefix("@")
+                .substringBefore(":")
         holder.unreadCounterBadgeView.render(UnreadCounterBadgeView.State.Count(unreadNotificationCount, showHighlighted))
        // holder.title.text = matrixItem.getBestName()
-        holder.title.text = username.ifEmpty { matrixItem.getBestName() }
+        holder.title.text = username.ifEmpty {  matrixItem.id
+                .removePrefix("@")
+                .substringBefore(":")}
     }
 
     override fun unbind(holder: Holder) {

@@ -15,7 +15,6 @@
         android:usesPermissionFlags="neverForLocation" />
     <!--    already paired devices-->
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.READ_CONTACTS" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
@@ -143,6 +142,7 @@
             android:theme="@style/Theme.Vector.Black.Transparent">
 
             <!-- Add intent filter to handle redirection URL after SSO login in external browser -->
+            <!-- FIX: Split into separate intent-filters so each host+scheme is a proper combined match -->
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
 
@@ -153,11 +153,18 @@
                     android:scheme="https"
                     android:host="oz.openzippers.com"
                     android:pathPattern=".*" />
+            </intent-filter>
 
-                <data android:scheme="https" />
-                <data android:host="chat.openzippers.com"/>
-                <data android:pathPattern=".*"/>
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
 
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:scheme="https"
+                    android:host="chat.openzippers.com"
+                    android:pathPattern=".*" />
             </intent-filter>
         </activity>
 
@@ -220,38 +227,54 @@
             android:name=".features.link.LinkHandlerActivity"
             android:enabled="true"
             android:exported="true">
+
+            <!-- FIX: Split into separate intent-filters, one per host, so scheme+host are always combined -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
 
-                <data android:scheme="https"/>
-                <data android:host="chat.openzippers.com"/>
-                <data android:host="oz.openzippers.com"/>
-                <data android:pathPattern=".*"/>
-
+                <data
+                    android:scheme="https"
+                    android:host="chat.openzippers.com"
+                    android:pathPattern=".*" />
             </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:scheme="https"
+                    android:host="oz.openzippers.com"
+                    android:pathPattern=".*" />
+            </intent-filter>
+
             <intent-filter android:autoVerify="true">
                 <action android:name="android.intent.action.VIEW" />
 
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
 
-                <data android:scheme="https" />
-                <data android:host="oz-chat.app"/>
-                <data android:host="ozchat.app"/>
-                <data android:pathPattern=".*"/>
+                <data
+                    android:scheme="https"
+                    android:host="oz-chat.app"
+                    android:pathPattern=".*" />
+            </intent-filter>
 
-                <!-- Note: we can't use "*.element.io" here because it'll intercept the "mas.element.io" domain too. -->
-                <!-- Matching asset file: https://app.element.io/.well-known/assetlinks.json -->
-                <!--                <data android:host="app.element.io" />
-                                &lt;!&ndash; Matching asset file: https://develop.element.io/.well-known/assetlinks.json &ndash;&gt;
-                                <data android:host="develop.element.io" />
-                                &lt;!&ndash; Matching asset file: https://staging.element.io/.well-known/assetlinks.json &ndash;&gt;
-                                <data android:host="staging.element.io" />
-                                &lt;!&ndash; Fix it https://github.com/element-hq/element-android/issues/8904 &ndash;&gt;
-                                <data android:host="mobile.element.io" />-->
+            <intent-filter android:autoVerify="true">
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:scheme="https"
+                    android:host="ozchat.app"
+                    android:pathPattern=".*" />
             </intent-filter>
 
             <intent-filter android:autoVerify="true">
@@ -284,31 +307,83 @@
             android:exported="true"
             android:launchMode="singleTask"
             android:targetActivity=".features.link.LinkHandlerActivity">
+
+            <!-- FIX: Split into separate intent-filters per host/scheme combination -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
 
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
 
-                <data android:scheme="http" />
-                <data android:scheme="https" />
-                <data android:host="matrix.to" />
+                <data android:scheme="https"
+                    android:host="matrix.to" />
+            </intent-filter>
 
-                <data android:scheme="https"/>
-                <data android:host="chat.openzippers.com"/>
-                <data android:host="oz.openzippers.com"/>
-                <data android:host="oz-chat.app"/>
-                <data android:host="ozchat.app"/>
-                <data android:pathPattern=".*"/>
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
 
-                <!--                <data
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data android:scheme="http"
+                    android:host="matrix.to" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:scheme="https"
+                    android:host="chat.openzippers.com"
+                    android:pathPattern=".*" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:scheme="https"
+                    android:host="oz.openzippers.com"
+                    android:pathPattern=".*" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:scheme="https"
+                    android:host="oz-chat.app"
+                    android:pathPattern=".*" />
+            </intent-filter>
+
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+
+                <data
+                    android:scheme="https"
+                    android:host="ozchat.app"
+                    android:pathPattern=".*" />
+            </intent-filter>
+
+            <!--                <data
                                     android:host="user"
                                     android:scheme="element" />
                                 <data
                                     android:host="room"
                                     android:scheme="element" />-->
 
-            </intent-filter>
         </activity-alias>
 
         <!-- exported="true" is required for the share functionality-->
@@ -439,26 +514,20 @@
             android:foregroundServiceType="phoneCall"
             android:exported="false" />
 
+        <service
+            android:name=".core.services.VectorSyncAndroidService"
+            android:exported="false"
+            android:stopWithTask="false"
+            tools:ignore="Instantiatable" />
 
         <service
-            android:name=".core.services.CallAndroidService"
-            android:foregroundServiceType="phoneCall"
-            android:exported="false">
-            <!-- in order to get headset button events -->
+            android:name=".features.call.telecom.VectorConnectionAndroidService"
+            android:permission="android.permission.BIND_TELECOM_CONNECTION_SERVICE"
+            android:exported="true">
             <intent-filter>
-                <action android:name="android.intent.action.MEDIA_BUTTON" />
+                <action android:name="android.telecom.ConnectionService" />
             </intent-filter>
         </service>
-
-
-                <service
-                    android:name=".features.call.telecom.VectorConnectionAndroidService"
-                    android:exported="false"
-                    android:permission="android.permission.BIND_TELECOM_CONNECTION_SERVICE">
-                    <intent-filter>
-                        <action android:name="android.telecom.ConnectionService" />
-                    </intent-filter>
-                </service>
 
 
         <service

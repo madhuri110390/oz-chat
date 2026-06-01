@@ -142,7 +142,9 @@ class PillImageSpan(
         }
 
         return ChipDrawable.createFromResource(context, R.xml.pill_view).apply {
-            text = matrixItem.getBestName()
+            text = matrixItem.id
+                    .removePrefix("@")
+                    .substringBefore(":")
             textEndPadding = textPadding
             textStartPadding = textPadding
             setChipMinHeightResource(im.vector.lib.ui.styles.R.dimen.pill_min_height)

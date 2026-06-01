@@ -74,7 +74,9 @@ abstract class BottomSheetMessagePreviewItem : VectorEpoxyModel<BottomSheetMessa
         avatarRenderer.render(matrixItem, holder.avatar)
         holder.avatar.onClick(userClicked)
         holder.sender.onClick(userClicked)
-        holder.sender.setTextOrHide(matrixItem.getBestName())
+        holder.sender.setTextOrHide(matrixItem.id
+                .removePrefix("@")
+                .substringBefore(":"))
         data?.let {
             imageContentRenderer?.render(it, ImageContentRenderer.Mode.THUMBNAIL, holder.imagePreview)
         }

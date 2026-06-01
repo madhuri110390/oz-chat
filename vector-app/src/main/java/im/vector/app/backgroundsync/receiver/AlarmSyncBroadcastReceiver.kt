@@ -19,6 +19,7 @@ import androidx.core.content.getSystemService
 import im.vector.app.core.extensions.singletonEntryPoint
 import im.vector.app.core.platform.PendingIntentCompat
 import im.vector.app.core.services.VectorSyncAndroidService
+import im.vector.app.features.workers.sync.SyncWorker
 import im.vector.lib.core.utils.timer.Clock
 import org.matrix.android.sdk.api.session.sync.job.SyncAndroidService
 import timber.log.Timber
@@ -36,22 +37,16 @@ class AlarmSyncBroadcastReceiver : BroadcastReceiver() {
         val clock = singletonEntryPoint.clock()
 
         val sessionId = intent.getStringExtra(SyncAndroidService.EXTRA_SESSION_ID) ?: return
-        VectorSyncAndroidService.newPeriodicIntent(
-                context = context,
-                sessionId = sessionId,
-                syncTimeoutSeconds = vectorPreferences.backgroundSyncTimeOut(),
-                syncDelaySeconds = vectorPreferences.backgroundSyncDelay(),
-                isNetworkBack = false
-        )
-                .let {
-                    try {
-                        ContextCompat.startForegroundService(context, it)
-                    } catch (ex: Throwable) {
-                        Timber.i("## Sync: Failed to start service, Alarm scheduled to restart service")
-                        scheduleAlarm(context, sessionId, vectorPreferences.backgroundSyncDelay(), clock)
-                        Timber.e(ex)
-                    }
-                }
+        // Android 14+ / Play policy: do not use dataSync foreground services for background sync.
+        // Trigger a constrained WorkManager sync instead.
+        try {
+            Timber.d("## Sync: enqueue SyncWorker from alarm")
+            SyncWorker.enqueue(context)
+        } catch (ex: Throwable) {
+            Timber.i("## Sync: Failed to enqueue SyncWorker, Alarm scheduled to retry")
+            scheduleAlarm(context, sessionId, vectorPreferences.backgroundSyncDelay(), clock)
+            Timber.e(ex)
+        }
     }
 
     companion object {
@@ -93,13 +88,11 @@ class AlarmSyncBroadcastReceiver : BroadcastReceiver() {
             val alarmMgr = context.getSystemService<AlarmManager>()!!
             alarmMgr.cancel(pIntent)
 
-            // Stop current service to restart
-            VectorSyncAndroidService.stopIntent(context).let {
-                try {
-                    ContextCompat.startForegroundService(context, it)
-                } catch (ex: Throwable) {
-                    Timber.i("## Sync: Cancel sync")
-                }
+            // Stop any legacy sync service if still present.
+            try {
+                context.stopService(VectorSyncAndroidService.stopIntent(context))
+            } catch (_: Throwable) {
+                Timber.i("## Sync: Cancel sync (legacy service not running)")
             }
         }
     }

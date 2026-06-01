@@ -48,7 +48,9 @@ abstract class ThreadListItem : VectorEpoxyModel<ThreadListItem.Holder>(R.layout
         super.bind(holder)
         holder.rootView.onClick(itemClickListener)
         avatarRenderer.render(matrixItem, holder.avatarImageView)
-        holder.avatarImageView.contentDescription = matrixItem.getBestName()
+        holder.avatarImageView.contentDescription = matrixItem.id
+                .removePrefix("@")
+                .substringBefore(":")
         holder.titleTextView.text = title
         holder.dateTextView.text = date
         if (rootMessageDeleted) {

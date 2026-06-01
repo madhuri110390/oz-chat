@@ -32,7 +32,9 @@ abstract class DisplayReadReceiptItem : VectorEpoxyModel<DisplayReadReceiptItem.
     override fun bind(holder: Holder) {
         super.bind(holder)
         avatarRenderer.render(matrixItem, holder.avatarView)
-        holder.displayNameView.text = matrixItem.getBestName()
+        holder.displayNameView.text = matrixItem.id
+                .removePrefix("@")
+                .substringBefore(":")
         timestamp?.let {
             holder.timestampView.text = it
             holder.timestampView.isVisible = true

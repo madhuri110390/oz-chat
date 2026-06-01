@@ -115,7 +115,9 @@ interface Navigator {
     fun openRoomProfile(context: Context, roomId: String, directAccess: Int? = null)
 
     fun openBigImageViewer(activity: Activity, sharedElement: View?, matrixItem: MatrixItem) {
-        openBigImageViewer(activity, sharedElement, matrixItem.avatarUrl, matrixItem.getBestName())
+        openBigImageViewer(activity, sharedElement, matrixItem.avatarUrl, matrixItem.id
+                .removePrefix("@")
+                .substringBefore(":"))
     }
 
     fun openBigImageViewer(activity: Activity, sharedElement: View?, mxcUrl: String?, title: String?)

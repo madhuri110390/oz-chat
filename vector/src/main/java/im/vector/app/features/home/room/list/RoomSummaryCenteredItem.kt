@@ -37,6 +37,7 @@ abstract class RoomSummaryCenteredItem : VectorEpoxyModel<RoomSummaryCenteredIte
     @EpoxyAttribute
     lateinit var avatarRenderer: AvatarRenderer
 
+
     @EpoxyAttribute
     lateinit var matrixItem: MatrixItem
 
@@ -84,7 +85,10 @@ abstract class RoomSummaryCenteredItem : VectorEpoxyModel<RoomSummaryCenteredIte
             it.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
             itemLongClickListener?.onLongClick(it) ?: false
         }
-        holder.titleView.text = matrixItem.getBestName()
+       // holder.titleView.text = matrixItem.getBestName()
+        holder.titleView.text = matrixItem.id
+                .removePrefix("@")
+                .substringBefore(":")
         avatarRenderer.render(matrixItem, holder.avatarImageView)
         holder.roomAvatarDecorationImageView.render(encryptionTrustLevel)
         holder.roomAvatarPublicDecorationImageView.isVisible = izPublic
