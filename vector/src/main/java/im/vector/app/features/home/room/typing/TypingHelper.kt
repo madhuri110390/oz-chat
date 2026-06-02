@@ -19,21 +19,26 @@ class TypingHelper @Inject constructor(private val stringProvider: StringProvide
      */
     fun getTypingMessage(typingUsers: List<SenderInfo>): String {
         return when {
-            typingUsers.isEmpty() ->
-                ""
+            typingUsers.isEmpty() -> ""
+
             typingUsers.size == 1 ->
-                stringProvider.getString(CommonStrings.room_one_user_is_typing, typingUsers[0].disambiguatedDisplayName)
+                stringProvider.getString(
+                        CommonStrings.room_one_user_is_typing,
+                        typingUsers[0].username()
+                )
+
             typingUsers.size == 2 ->
                 stringProvider.getString(
                         CommonStrings.room_two_users_are_typing,
-                        typingUsers[0].disambiguatedDisplayName,
-                        typingUsers[1].disambiguatedDisplayName
+                        typingUsers[0].username(),
+                        typingUsers[1].username()
                 )
+
             else ->
                 stringProvider.getString(
                         CommonStrings.room_many_users_are_typing,
-                        typingUsers[0].disambiguatedDisplayName,
-                        typingUsers[1].disambiguatedDisplayName
+                        typingUsers[0].username(),
+                        typingUsers[1].username()
                 )
         }
     }
@@ -41,15 +46,28 @@ class TypingHelper @Inject constructor(private val stringProvider: StringProvide
     fun getNotificationTypingMessage(typingUsers: List<SenderInfo>): String {
         return when {
             typingUsers.isEmpty() -> ""
-            typingUsers.size == 1 -> typingUsers[0].disambiguatedDisplayName
-            typingUsers.size == 2 -> stringProvider.getString(
-                    CommonStrings.room_notification_two_users_are_typing,
-                    typingUsers[0].disambiguatedDisplayName, typingUsers[1].disambiguatedDisplayName
-            )
-            else -> stringProvider.getString(
-                    CommonStrings.room_notification_more_than_two_users_are_typing,
-                    typingUsers[0].disambiguatedDisplayName, typingUsers[1].disambiguatedDisplayName
-            )
+
+            typingUsers.size == 1 ->
+                typingUsers[0].username()
+
+            typingUsers.size == 2 ->
+                stringProvider.getString(
+                        CommonStrings.room_notification_two_users_are_typing,
+                        typingUsers[0].username(),
+                        typingUsers[1].username()
+                )
+
+            else ->
+                stringProvider.getString(
+                        CommonStrings.room_notification_more_than_two_users_are_typing,
+                        typingUsers[0].username(),
+                        typingUsers[1].username()
+                )
         }
+    }
+    private fun SenderInfo.username(): String {
+        return userId
+                .removePrefix("@")
+                .substringBefore(":")
     }
 }

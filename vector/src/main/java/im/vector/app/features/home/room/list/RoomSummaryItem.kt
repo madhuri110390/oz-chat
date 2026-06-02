@@ -134,7 +134,12 @@ abstract class RoomSummaryItem : VectorEpoxyModel<RoomSummaryItem.Holder>(R.layo
     private fun renderForDefaultDisplayMode(holder: Holder) {
         holder.subtitleView.text = lastFormattedEvent.charSequence
         holder.lastEventTimeView.text = lastEventTime
-        holder.typingView.setTextOrHide(typingMessage)
+        //holder.typingView.setTextOrHide(typingMessage)
+        holder.typingView.setTextOrHide(
+                typingMessage
+                        ?.removePrefix("@")
+                        ?.substringBefore(":")
+        )
         holder.subtitleView.isInvisible = holder.typingView.isVisible
     }
 

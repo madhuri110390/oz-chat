@@ -16,6 +16,9 @@ class ZoomableImageViewHolder constructor(itemView: View) :
     val views = ItemImageAttachmentBinding.bind(itemView)
 
     init {
+        views.touchImageView.maximumScale = 5f
+        views.touchImageView.mediumScale = 2f
+        views.touchImageView.minimumScale = 1f
         views.touchImageView.setAllowParentInterceptOnEdge(false)
         views.touchImageView.setOnScaleChangeListener { scaleFactor, _, _ ->
             // Log.v("ATTACHEMENTS", "scaleFactor $scaleFactor")

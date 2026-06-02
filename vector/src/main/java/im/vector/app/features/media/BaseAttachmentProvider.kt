@@ -58,10 +58,13 @@ abstract class BaseAttachmentProvider<Type>(
         if (timelineEvent != null) {
             val dateString = dateFormatter.format(timelineEvent.root.originServerTs, DateFormatKind.DEFAULT_DATE_AND_TIME)
             // Extract username (local part only)
-            val username = timelineEvent.senderInfo.userId?.substringAfter(":")?.substringAfter("@") ?: ""
+            val username = timelineEvent.senderInfo.userId
+                    .substringAfter("@")
+                    .substringBefore(":")
             overlayView?.updateWith(
                     counter = stringProvider.getString(CommonStrings.attachment_viewer_item_x_of_y, position + 1, getItemCount()),
-                    senderInfo = "$username $dateString"
+                   // senderInfo = "$username $dateString"
+                    senderInfo = ""
             )
             overlayView?.views?.overlayVideoControlsGroup?.isVisible = timelineEvent.root.isVideoMessage()
         } else {

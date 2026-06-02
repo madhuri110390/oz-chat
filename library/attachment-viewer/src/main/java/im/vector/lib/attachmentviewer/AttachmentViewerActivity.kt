@@ -159,11 +159,18 @@ abstract class AttachmentViewerActivity : AppCompatActivity(), AttachmentEventLi
 
         handleUpDownEvent(ev)
 
-        return if (swipeDirection == null && (scaleDetector.isInProgress || ev.pointerCount > 1 || wasScaled)) {
+        return if (
+                swipeDirection == null &&
+                (scaleDetector.isInProgress || ev.pointerCount > 1 || wasScaled)
+        ) {
             wasScaled = true
-            views.attachmentPager.dispatchTouchEvent(ev)
+            super.dispatchTouchEvent(ev)
         } else {
-            if (isScaled()) super.dispatchTouchEvent(ev) else handleTouchIfNotScaled(ev)
+            if (isScaled()) {
+                super.dispatchTouchEvent(ev)
+            } else {
+                handleTouchIfNotScaled(ev)
+            }
         }
     }
 

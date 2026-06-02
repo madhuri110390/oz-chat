@@ -505,7 +505,9 @@ internal class RichTextComposerLayout @JvmOverloads constructor(
             }
             is MessageComposerMode.Reply -> {
                 val senderInfo = mode.event.senderInfo
-                val userName = senderInfo.displayName ?: senderInfo.disambiguatedDisplayName
+                val userName = senderInfo.userId
+                        .removePrefix("@")
+                        .substringBefore(":")
                 views.composerModeTitleView.text = resources.getString(CommonStrings.replying_to, userName)
                 views.composerModeIconView.setImageResource(R.drawable.ic_reply)
             }

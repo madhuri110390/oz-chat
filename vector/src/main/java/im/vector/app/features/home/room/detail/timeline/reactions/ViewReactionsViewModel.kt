@@ -86,7 +86,9 @@ class ViewReactionsViewModel @AssistedInject constructor(
                                             event.root.eventId!!,
                                             reactionsSummary.key,
                                             event.root.senderId ?: "",
-                                            event.senderInfo.disambiguatedDisplayName,
+                                            event.senderInfo.userId
+                                                    .removePrefix("@")
+                                                    .substringBefore(":"),
                                             dateFormatter.format(event.root.originServerTs, DateFormatKind.DEFAULT_DATE_AND_TIME)
 
                                     )

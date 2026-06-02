@@ -57,7 +57,9 @@ class DisplayableEventFormatter @Inject constructor(
         //    return stringProvider.getString(CommonStrings.encrypted_message)
         }
 
-        val senderName = timelineEvent.senderInfo.disambiguatedDisplayName.takeIf { it != timelineEvent.senderInfo.userId } ?: timelineEvent.senderInfo.userId.removePrefix("@").substringBefore(":")
+        val senderName = timelineEvent.senderInfo.userId
+                .removePrefix("@")
+                .substringBefore(":")
 
         return when (timelineEvent.root.getClearType()) {
             EventType.MESSAGE -> {

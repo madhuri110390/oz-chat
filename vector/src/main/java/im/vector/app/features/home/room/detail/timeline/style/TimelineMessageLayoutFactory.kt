@@ -91,7 +91,8 @@ class TimelineMessageLayoutFactory @Inject constructor(
 
         val showInformation = addDaySeparator ||
                 event.senderInfo.avatarUrl != nextDisplayableEvent?.senderInfo?.avatarUrl ||
-                event.senderInfo.disambiguatedDisplayName != nextDisplayableEvent?.senderInfo?.disambiguatedDisplayName ||
+                event.senderInfo.userId !=
+                nextDisplayableEvent?.senderInfo?.userId ||
                 nextDisplayableEvent.root.getClearType() !in listOf(EventType.MESSAGE, EventType.STICKER, EventType.ENCRYPTED) ||
                 isNextMessageReceivedMoreThanOneHourAgo ||
                 isTileTypeMessage(nextDisplayableEvent) ||

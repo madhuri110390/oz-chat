@@ -253,7 +253,12 @@ fun PublicRoom.toMatrixItem() = MatrixItem.RoomItem(roomId, name ?: getPrimaryAl
 
 fun RoomMemberSummary.toMatrixItem() = MatrixItem.UserItem(userId, displayName, avatarUrl)
 
-fun SenderInfo.toMatrixItem() = MatrixItem.UserItem(userId, disambiguatedDisplayName, avatarUrl)
+fun SenderInfo.toMatrixItem() =
+        MatrixItem.UserItem(
+                userId,
+                userId.removePrefix("@").substringBefore(":"),
+                avatarUrl
+        )
 
 fun SenderInfo.toMatrixItemOrNull() = tryOrNull { MatrixItem.UserItem(userId, disambiguatedDisplayName, avatarUrl) }
 

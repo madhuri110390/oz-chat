@@ -93,20 +93,28 @@ class VideoViewHolder constructor(itemView: View) :
         views.videoControlIcon.isVisible = false
         views.videoView.visibility = View.VISIBLE
 
-        views.videoView.holder.addCallback(object : android.view.SurfaceHolder.Callback {
-            override fun surfaceCreated(holder: android.view.SurfaceHolder) {
-                // ✅ Surface is ready NOW — safe to set video
-                setVideoAndPlay()
-            }
-            override fun surfaceChanged(holder: android.view.SurfaceHolder, format: Int, width: Int, height: Int) {}
-            override fun surfaceDestroyed(holder: android.view.SurfaceHolder) {}
-        })
-
-        // ✅ If surface already exists, callback won't fire — call directly
-        if (views.videoView.holder.surface.isValid) {
-            setVideoAndPlay()
-        }
+        setVideoAndPlay()
     }
+//    private fun startPlaying() {
+//        views.videoThumbnailImage.isVisible = false
+//        views.videoLoaderProgress.isVisible = false
+//        views.videoControlIcon.isVisible = false
+//        views.videoView.visibility = View.VISIBLE
+//
+//        views.videoView.holder.addCallback(object : android.view.SurfaceHolder.Callback {
+//            override fun surfaceCreated(holder: android.view.SurfaceHolder) {
+//                // ✅ Surface is ready NOW — safe to set video
+//                setVideoAndPlay()
+//            }
+//            override fun surfaceChanged(holder: android.view.SurfaceHolder, format: Int, width: Int, height: Int) {}
+//            override fun surfaceDestroyed(holder: android.view.SurfaceHolder) {}
+//        })
+//
+//        // ✅ If surface already exists, callback won't fire — call directly
+//        if (views.videoView.holder.surface.isValid) {
+//            setVideoAndPlay()
+//        }
+//    }
     private fun setVideoAndPlay() {
         views.videoView.setOnPreparedListener { mp ->
             mp.setVideoScalingMode(android.media.MediaPlayer.VIDEO_SCALING_MODE_SCALE_TO_FIT)

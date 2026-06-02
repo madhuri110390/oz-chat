@@ -56,10 +56,10 @@ class RoomWidgetPermissionBottomSheet :
         super.invalidate()
         val permissionData = state.permissionData() ?: return@withState
         views.widgetPermissionOwnerId.text = permissionData.widget.senderInfo?.userId ?: ""
-        views.widgetPermissionOwnerDisplayName.text = permissionData.widget.senderInfo?.disambiguatedDisplayName
-        permissionData.widget.senderInfo?.toMatrixItem()?.also {
-            avatarRenderer.render(it, views.widgetPermissionOwnerAvatar)
-        }
+        views.widgetPermissionOwnerDisplayName.text =
+                permissionData.widget.senderInfo?.userId
+                        ?.removePrefix("@")
+                        ?.substringBefore(":")
 
         val domain = permissionData.widgetDomain ?: ""
         val infoBuilder = SpannableStringBuilder()

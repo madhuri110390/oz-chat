@@ -88,7 +88,9 @@ class MessageInformationDataFactory @Inject constructor(
                 time = time,
                 ageLocalTS = event.root.ageLocalTs,
                 avatarUrl = event.senderInfo.avatarUrl,
-                memberName = event.senderInfo.disambiguatedDisplayName.takeIf { it != event.senderInfo.userId } ?: event.senderInfo.userId.removePrefix("@").substringBefore(":"),
+                memberName = event.senderInfo.userId
+                        .removePrefix("@")
+                        .substringBefore(":"),
                 messageLayout = messageLayout,
                 reactionsSummary = reactionsSummaryFactory.create(event),
                 pollResponseAggregatedSummary = pollResponseDataFactory.create(event),

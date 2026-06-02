@@ -62,7 +62,9 @@ class UploadsFileController @Inject constructor(
                 subtitle(
                         host.stringProvider.getString(
                                 CommonStrings.uploads_files_subtitle,
-                                uploadEvent.senderInfo.disambiguatedDisplayName,
+                                uploadEvent.senderInfo.userId
+                                        .removePrefix("@")
+                                        .substringBefore(":"),
                                 host.dateFormatter.format(uploadEvent.root.originServerTs, DateFormatKind.DEFAULT_DATE_AND_TIME)
                         )
                 )

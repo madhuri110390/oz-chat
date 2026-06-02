@@ -62,8 +62,8 @@ class AttachmentOverlayView @JvmOverloads constructor(
     }
 
     fun updateWith(counter: String, senderInfo: String) {
-        views.overlayCounterText.text = counter
-        views.overlayInfoText.text = senderInfo
+        views.overlayCounterText.text = ""
+        views.overlayInfoText.text = ""
     }
 
     override fun onEvent(event: AttachmentEvents) {

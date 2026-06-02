@@ -9,14 +9,26 @@ package im.vector.app.features.displayname
 
 import org.matrix.android.sdk.api.util.MatrixItem
 
+//fun MatrixItem.getBestName(): String {
+//    val name = if (this is MatrixItem.UserItem) {
+//        VectorMatrixItemDisplayNameFallbackProvider.getDefaultName(this)
+//    } else {
+//        displayName
+//                ?.takeIf { it.isNotBlank() }
+//                ?: VectorMatrixItemDisplayNameFallbackProvider.getDefaultName(this)
+//    }
+//
+//    return name.removePrefix("/profile/")
+//}
 fun MatrixItem.getBestName(): String {
-    val name = if (this is MatrixItem.UserItem) {
-        VectorMatrixItemDisplayNameFallbackProvider.getDefaultName(this)
-    } else {
-        displayName
-                ?.takeIf { it.isNotBlank() }
-                ?: VectorMatrixItemDisplayNameFallbackProvider.getDefaultName(this)
+    return when (this) {
+        is MatrixItem.UserItem -> {
+            id.removePrefix("@").substringBefore(":")
+        }
+        else -> {
+            (displayName?.takeIf { it.isNotBlank() }
+                    ?: VectorMatrixItemDisplayNameFallbackProvider.getDefaultName(this))
+                    .removePrefix("/profile/")
+        }
     }
-
-    return name.removePrefix("/profile/")
 }

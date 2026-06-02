@@ -198,7 +198,9 @@ class MergedHeaderItemFactory @Inject constructor(
                         roomId = mergedEvent.root.roomId,
                         userId = mergedEvent.root.senderId ?: "",
                         avatarUrl = mergedEvent.senderInfo.avatarUrl,
-                        memberName = mergedEvent.senderInfo.disambiguatedDisplayName,
+                        memberName = mergedEvent.senderInfo.userId
+                                .removePrefix("@")
+                                .substringBefore(":"),
                         localId = mergedEvent.localId,
                         eventId = mergedEvent.root.eventId ?: "",
                         isDirectRoom = partialState.isDirectRoom()
@@ -286,7 +288,9 @@ class MergedHeaderItemFactory @Inject constructor(
                                 roomId = mergedEvent.root.roomId,
                                 userId = mergedEvent.root.senderId ?: "",
                                 avatarUrl = mergedEvent.senderInfo.avatarUrl,
-                                memberName = mergedEvent.senderInfo.disambiguatedDisplayName,
+                                memberName = mergedEvent.senderInfo.userId
+                                        .removePrefix("@")
+                                        .substringBefore(":"),
                                 localId = mergedEvent.localId,
                                 eventId = mergedEvent.root.eventId ?: "",
                                 isDirectRoom = partialState.isDirectRoom()
