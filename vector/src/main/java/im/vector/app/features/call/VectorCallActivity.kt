@@ -155,6 +155,7 @@ class VectorCallActivity :
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         val windowInsetsController = WindowInsetsControllerCompat(window, window.decorView)
         windowInsetsController.isAppearanceLightStatusBars = false
@@ -190,7 +191,7 @@ class VectorCallActivity :
                 handleCallEnded(callState)
             }
         }
-        super.onCreate(savedInstanceState)
+
 
         enableImmersiveMode()
         addOnPictureInPictureModeChangedListener(pictureInPictureModeChangedInfoConsumer)
