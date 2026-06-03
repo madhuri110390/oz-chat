@@ -195,12 +195,20 @@ abstract class AttachmentViewerActivity : AppCompatActivity(), AttachmentEventLi
         isOverlayWasClicked = dispatchOverlayTouch(event)
     }
 
-    private fun handleSingleTap(event: MotionEvent, isOverlayWasClicked: Boolean) {
-        if (overlayView != null && !isOverlayWasClicked) {
+//    private fun handleSingleTap(event: MotionEvent, isOverlayWasClicked: Boolean) {
+//        if (overlayView != null && !isOverlayWasClicked) {
+//            toggleOverlayViewVisibility()
+//            super.dispatchTouchEvent(event)
+//        }
+//    }
+private fun handleSingleTap(event: MotionEvent, isOverlayWasClicked: Boolean) {
+    if (!isOverlayWasClicked) {
+        if (overlayView != null) {
             toggleOverlayViewVisibility()
-            super.dispatchTouchEvent(event)
         }
+        super.dispatchTouchEvent(event)
     }
+}
 
     private fun toggleOverlayViewVisibility() {
         TransitionManager.beginDelayedTransition(views.rootContainer)

@@ -85,9 +85,7 @@ abstract class MessageImageVideoItem : AbsMessageItem<MessageImageVideoItem.Hold
             clickListener?.invoke(holder.imageView)
         }
 
-        holder.imageView.setOnClickListener {
-            Log.e("VIDEO_DEBUG", "IMAGE CLICKED")
-        }
+
         holder.playContentView.visibility = if (playable && isImageMessage && autoplayAnimatedImages) {
             View.GONE
         } else if (playable) {

@@ -21,6 +21,8 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         tools:ignore="ContentDescription"
+        android:clickable="true"
+        android:focusable="true"
         tools:src="@sample/room_round_avatars" />
 
     <im.vector.app.features.home.room.list.UnreadCounterBadgeView

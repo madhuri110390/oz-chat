@@ -39,7 +39,7 @@ ext.versionMinor = 6
 // Note: even values are reserved for regular release, odd values for hotfix release.
 // When creating a hotfix, you should decrease the value, since the current value
 // is the value for the next regular release.
-ext.versionPatch = 109
+ext.versionPatch = 110
 ext.buildNumber  = 1
 
 static def getGitTimestamp() {
