@@ -85,11 +85,17 @@ class CallAndroidService : VectorAndroidService() {
     }
 
     override fun onDestroy() {
-        super.onDestroy()
         incomingCallRinger.stop()
         callRingPlayerOutgoing?.stop()
+
+        notificationManager.cancelAll()
+
+        stopForegroundCompat()
+
         mediaSession?.release()
         mediaSession = null
+
+        super.onDestroy()
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -198,6 +204,11 @@ class CallAndroidService : VectorAndroidService() {
         callRingPlayerOutgoing?.stop()
 
         alertManager.cancelAlert(callId)
+
+        notificationManager.cancel(callId.hashCode())
+        notificationManager.cancelAll()
+
+        alertManager.cancelAlert(callId)
         notificationManager.cancel(callId.hashCode())
 
         val terminatedCall = knownCalls.remove(callId)
@@ -212,11 +223,26 @@ class CallAndroidService : VectorAndroidService() {
             }
             return
         }
-        val notification = notificationUtils.buildCallEndedNotification(false)
-        val notificationId = callId.hashCode()
-        startForegroundCompat(notificationId, notification) {
-            ServiceInfo.FOREGROUND_SERVICE_TYPE_MANIFEST
-        }
+//        val notification = notificationUtils.buildCallEndedNotification(false)
+//        val notificationId = callId.hashCode()
+//        startForegroundCompat(notificationId, notification) {
+//            ServiceInfo.FOREGROUND_SERVICE_TYPE_MANIFEST
+//        }
+        incomingCallRinger.stop()
+        callRingPlayerOutgoing?.stop()
+
+        notificationManager.cancel(callId.hashCode())
+        notificationManager.cancelAll()
+
+        stopForegroundCompat()
+
+        mediaSession?.isActive = false
+
+        myStopSelf()
+
+        stopService(Intent(this, MicrophoneAccessService::class.java))
+
+        return
         if (knownCalls.isEmpty()) {
             Timber.tag(loggerTag.value).v("No more call, stop the service")
             stopForegroundCompat()
@@ -288,26 +314,37 @@ class CallAndroidService : VectorAndroidService() {
         }
         knownCalls[callId] = callInformation
     }
-
     private fun handleUnexpectedState(callId: String?) {
-        Timber.tag(loggerTag.value).v("Fallback to clear everything")
         incomingCallRinger.stop()
         callRingPlayerOutgoing?.stop()
-        val notification = notificationUtils.buildCallEndedNotification(false)
-        if (callId != null) {
-            startForegroundCompat(callId.hashCode(), notification) {
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_MANIFEST
-            }
-        } else {
-            startForegroundCompat(DEFAULT_NOTIFICATION_ID, notification) {
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_MANIFEST
-            }
-        }
-        if (knownCalls.isEmpty()) {
-            mediaSession?.isActive = false
-            myStopSelf()
-        }
+
+        notificationManager.cancelAll()
+
+        stopForegroundCompat()
+
+        mediaSession?.isActive = false
+
+        myStopSelf()
     }
+//    private fun handleUnexpectedState(callId: String?) {
+//        Timber.tag(loggerTag.value).v("Fallback to clear everything")
+//        incomingCallRinger.stop()
+//        callRingPlayerOutgoing?.stop()
+//        val notification = notificationUtils.buildCallEndedNotification(false)
+//        if (callId != null) {
+//            startForegroundCompat(callId.hashCode(), notification) {
+//                ServiceInfo.FOREGROUND_SERVICE_TYPE_MANIFEST
+//            }
+//        } else {
+//            startForegroundCompat(DEFAULT_NOTIFICATION_ID, notification) {
+//                ServiceInfo.FOREGROUND_SERVICE_TYPE_MANIFEST
+//            }
+//        }
+//        if (knownCalls.isEmpty()) {
+//            mediaSession?.isActive = false
+//            myStopSelf()
+//        }
+//    }
 
     fun addConnection(callConnection: CallConnection) {
         connections[callConnection.callId] = callConnection
@@ -390,7 +427,7 @@ class CallAndroidService : VectorAndroidService() {
         fun onCallTerminated(
                 context: Context,
                 callId: String,
-                endCallReason: EndCallReason,
+                endCallReason: EndCallReason?,
                 rejected: Boolean
         ) {
             val intent = Intent(context, CallAndroidService::class.java)

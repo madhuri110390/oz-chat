@@ -721,23 +721,7 @@ class VectorCallActivity :
      * the moment the SDK delivers CallState.Ended — no polling, no delay.
      * When in PiP, renderPiPMode already calls finish(); this handles non-PiP.
      */
-//    private fun handleCallEnded(callState: CallState.Ended) {
-//        // Stop screen sharing service immediately when call ends.
-//        // FIX #2 / #4: Ensures MediaProjection is released so no orphaned capture continues.
-//        handleStopScreenSharingService()
-//
-//        when (callState.reason) {
-//            EndCallReason.USER_BUSY -> showEndCallDialog(
-//                    CommonStrings.call_ended_user_busy_title,
-//                    CommonStrings.call_ended_user_busy_description
-//            )
-//            EndCallReason.INVITE_TIMEOUT -> showEndCallDialog(
-//                    CommonStrings.call_ended_invite_timeout_title,
-//                    CommonStrings.call_error_user_not_responding
-//            )
-//            else -> finish()
-//        }
-//    }
+
 
 //    private fun handleCallEnded(callState: CallState.Ended) {
 //        handleStopScreenSharingService()
@@ -765,45 +749,22 @@ class VectorCallActivity :
 //            else -> finish()
 //        }
 //    }
-
     private fun handleCallEnded(callState: CallState.Ended) {
         if (callEndHandled) return
         callEndHandled = true
 
-        handleStopScreenSharingService()
         notificationDrawerManager.clearAllEvents()
 
-        val callArgs = intent.getParcelableExtraCompat<CallArgs>(Mavericks.KEY_ARG)
-        val isIncomingCall = callArgs?.isIncomingCall == true
-        val formattedDuration = withState(callViewModel) { it.formattedDuration }
-        val wasNeverAnswered = formattedDuration.isEmpty() || formattedDuration == "00:00"
+        CallAndroidService.onCallTerminated(
+                applicationContext,
+                withState(callViewModel) { it.callId },
+                callState.reason,
+                false
+        )
 
-        when (callState.reason) {
-            EndCallReason.USER_BUSY -> {
-                if (!isIncomingCall) Toast.makeText(this, "No answer", Toast.LENGTH_LONG).show()
-                finish()
-            }
-            EndCallReason.INVITE_TIMEOUT -> {
-                if (isIncomingCall) {
-                    Toast.makeText(this, "Missed voice call", Toast.LENGTH_LONG).show()
-                } else {
-                    Toast.makeText(this, "No answer", Toast.LENGTH_LONG).show()
-                }
-                finish()
-            }
-            EndCallReason.USER_HANGUP, EndCallReason.REPLACED -> {
-                if (wasNeverAnswered) {
-                    if (isIncomingCall) {
-                        Toast.makeText(this, "Missed voice call", Toast.LENGTH_LONG).show()
-                    } else {
-                        Toast.makeText(this, "No answer", Toast.LENGTH_LONG).show()
-                    }
-                }
-                finish()
-            }
-            else -> finish()
-        }
+        finishAndRemoveTask()
     }
+
     private fun showEndCallDialog(@StringRes title: Int, @StringRes description: Int) {
         if (isFinishing || isDestroyed) return
         MaterialAlertDialogBuilder(this)
