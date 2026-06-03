@@ -54,6 +54,7 @@ import im.vector.app.core.extensions.registerStartForActivityResult
 import im.vector.app.core.extensions.setTextOrHide
 import im.vector.app.core.platform.VectorBaseActivity
 import im.vector.app.core.platform.VectorMenuProvider
+import im.vector.app.core.services.CallAndroidService
 import im.vector.app.core.utils.PERMISSIONS_FOR_AUDIO_IP_CALL
 import im.vector.app.core.utils.PERMISSIONS_FOR_VIDEO_IP_CALL
 import im.vector.app.core.utils.checkPermissions
@@ -111,7 +112,7 @@ class VectorCallActivity :
     @Inject lateinit var callManager: WebRtcCallManager
     @Inject lateinit var avatarRenderer: AvatarRenderer
     @Inject lateinit var screenCaptureServiceConnection: ScreenCaptureServiceConnection
-
+    private var callWasAnswered = false
     private val callViewModel: VectorCallViewModel by viewModel()
 
     private val dialPadCallback = object : DialPadFragment.Callback {
@@ -263,11 +264,17 @@ class VectorCallActivity :
         enableImmersiveMode()
     }
 
-    override fun onDestroy() {
+
         // FIX #4: Detach renderers BEFORE releasing them to prevent
         // "SurfaceViewRenderer already released" crash after long calls.
         // detachRenderersIfNeeded() guards with surfaceRenderersAreInitialized flag.
-        detachRenderersIfNeeded()
+        override fun onDestroy() {
+            withState(callViewModel) { state ->
+                if (state.callState.invoke() is CallState.LocalRinging) {
+                    callViewModel.handle(VectorCallViewActions.DeclineCall)
+                }
+            }
+            detachRenderersIfNeeded()
         turnScreenOffAndKeyguardOn()
         removeOnPictureInPictureModeChangedListener(pictureInPictureModeChangedInfoConsumer)
         screenCaptureServiceConnection.unbind()
@@ -617,6 +624,7 @@ class VectorCallActivity :
 
             is CallState.Connected -> {
                 if (callState.iceConnectionState == MxPeerConnectionState.CONNECTED) {
+                    callWasAnswered = true
                     if (state.isLocalOnHold || state.isRemoteOnHold) {
                         views.smallIsHeldIcon.isVisible = true
                         views.fullscreenRenderer.isVisible = false
@@ -635,9 +643,16 @@ class VectorCallActivity :
                 }
             }
 
+//            is CallState.Ended -> {
+//                // FIX #2: Immediately bring activity to front and finish when call ends
+//                // while we are in PiP — this closes the PiP window right away.
+//                val startIntent = Intent(this, VectorCallActivity::class.java).apply {
+//                    flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
+//                }
+//                startActivity(startIntent)
+//                finish()
+//            }
             is CallState.Ended -> {
-                // FIX #2: Immediately bring activity to front and finish when call ends
-                // while we are in PiP — this closes the PiP window right away.
                 val startIntent = Intent(this, VectorCallActivity::class.java).apply {
                     flags = Intent.FLAG_ACTIVITY_REORDER_TO_FRONT
                 }
@@ -736,6 +751,10 @@ class VectorCallActivity :
 //    }
 
     private fun handleCallEnded(callState: CallState.Ended) {
+        // DO NOT call CallAndroidService.onCallTerminated here —
+        // WebRtcCall.terminate() already does it. Calling it twice
+        // causes race conditions and the banner/ringer not clearing.
+
         handleStopScreenSharingService()
         notificationDrawerManager.clearAllEvents()
 
@@ -750,7 +769,6 @@ class VectorCallActivity :
                 finish()
             }
             EndCallReason.INVITE_TIMEOUT -> {
-                // Triggered after 8 rings (~40 s) — set in WebRtcCallManager invite timeout
                 if (isIncomingCall) {
                     Toast.makeText(this, "Missed voice call", Toast.LENGTH_LONG).show()
                 } else {
@@ -759,8 +777,8 @@ class VectorCallActivity :
                 finish()
             }
             EndCallReason.USER_HANGUP, EndCallReason.REPLACED -> {
-                if (wasNeverAnswered) {
-                    if (isIncomingCall) {
+                if (!callWasAnswered){
+                if (isIncomingCall) {
                         Toast.makeText(this, "Missed voice call", Toast.LENGTH_LONG).show()
                     } else {
                         Toast.makeText(this, "No answer", Toast.LENGTH_LONG).show()

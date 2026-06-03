@@ -154,8 +154,9 @@ class NotifiableEventResolver @Inject constructor(
             // For incoming Element Call, check that the user is mentioned
             val isIncomingElementCall = event.root.getClearType() in EventType.ELEMENT_CALL_NOTIFY.values &&
                     event.root.getClearContent()?.toModel<ElementCallNotifyContent>()?.isUserMentioned(session.myUserId) == true
+            val isIncomingVoipCall = event.root.getClearType() == EventType.CALL_INVITE
             when {
-                isIncomingElementCall || event.root.supportsNotification() -> {
+                isIncomingElementCall || isIncomingVoipCall || event.root.supportsNotification() -> {
                     val body = displayableEventFormatter.format(event, isDm = room.roomSummary()?.isDirect.orFalse(), appendAuthor = false).toString()
                     val roomName = room.roomSummary()?.displayName ?: ""
                     val senderDisplayName = event.senderInfo.userId.removePrefix("@").substringBefore(":")
@@ -190,7 +191,7 @@ class NotifiableEventResolver @Inject constructor(
                                     ),
                             matrixID = session.myUserId,
                             soundName = null,
-                            isCall = isIncomingElementCall
+                            isCall = isIncomingElementCall || isIncomingVoipCall
                     )
                 }
                 else -> null

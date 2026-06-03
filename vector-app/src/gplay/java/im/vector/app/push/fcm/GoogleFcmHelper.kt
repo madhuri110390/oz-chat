@@ -60,12 +60,53 @@ class GoogleFcmHelper @Inject constructor(
         if (checkPlayServices(context)) {
             scope.launch {
                 try {
+                    val currentVersionCode = try {
+                        val packageInfo = context.packageManager.getPackageInfo(context.packageName, 0)
+                        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+                            packageInfo.longVersionCode
+                        } else {
+                            @Suppress("DEPRECATION")
+                            packageInfo.versionCode.toLong()
+                        }
+                    } catch (e: Exception) {
+                        -1L
+                    }
+
+                    val lastVersionCode = sharedPrefs.getLong("LAST_KNOWN_APP_VERSION", -1L)
+                    val tokenFreshnessMarker = sharedPrefs.getBoolean("TOKEN_FRESHNESS_MARKER_V2", false)
+                    val shouldForceTokenRefresh = (currentVersionCode != lastVersionCode) || !tokenFreshnessMarker
+
+                    if (shouldForceTokenRefresh) {
+                        try {
+                            Timber.d("Forcing FCM token refresh to avoid stale tokens (update/reinstall/clear data detected)")
+                            com.google.android.gms.tasks.Tasks.await(FirebaseMessaging.getInstance().deleteToken())
+                            Timber.d("Stale FCM token successfully deleted from Firebase")
+                        } catch (e: Exception) {
+                            Timber.w("Failed to delete FCM token: ${e.message}")
+                        }
+                    }
+
                     val token = com.google.android.gms.tasks.Tasks.await(FirebaseMessaging.getInstance().token)
                     if (token != null) {
+                        Timber.d("current FCM token: $token")
+                        Timber.d("token generated: $token")
+                        Timber.d("token generated / retrieved successfully")
+                        
+                        if (shouldForceTokenRefresh) {
+                            sharedPrefs.edit {
+                                putLong("LAST_KNOWN_APP_VERSION", currentVersionCode)
+                                putBoolean("TOKEN_FRESHNESS_MARKER_V2", true)
+                            }
+                        }
+
                         val currentPusher = pushersManager.getPusherForCurrentSession()
                         val noPusher = currentPusher == null
                         val tokenChanged = currentPusher?.pushKey != token
                         
+                        if (tokenChanged) {
+                            Timber.d("token refreshed: $token")
+                            Timber.d("token refreshed")
+                        }
                         Timber.d("## ensureFcmTokenIsRetrieved() : Retrieved new FCM token, length=${token.length}, tokenChanged=$tokenChanged, registerPusher=$registerPusher")
                         storeFcmToken(token)
                         
@@ -74,10 +115,14 @@ class GoogleFcmHelper @Inject constructor(
                         
                         if (registerPusher || noPusher || tokenChanged) {
                             Timber.d("## ensureFcmTokenIsRetrieved() : Registering pusher with FCM token")
+                            Timber.d("token sent to backend / Matrix push registration")
                             try {
-                                pushersManager.registerPusherWithFcmKey(token)
+                                pushersManager.enqueueRegisterPusherWithFcmKey(token)
+                                Timber.d("push registration success")
+                                Timber.d("token registered to Matrix")
                                 Timber.d("## ensureFcmTokenIsRetrieved() : Successfully registered pusher with FCM token")
                             } catch (e: Exception) {
+                                Timber.e(e, "push registration failure")
                                 Timber.e(e, "## ensureFcmTokenIsRetrieved() : Failed to register pusher with FCM token")
                             }
                         }

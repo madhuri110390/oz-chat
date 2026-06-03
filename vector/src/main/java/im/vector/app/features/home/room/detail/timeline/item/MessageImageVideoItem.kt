@@ -55,6 +55,7 @@ abstract class MessageImageVideoItem : AbsMessageItem<MessageImageVideoItem.Hold
 
     override fun bind(holder: Holder) {
         super.bind(holder)
+        holder.imageView.visibility = View.VISIBLE
         val messageLayout = baseAttributes.informationData.messageLayout
         val dimensionConverter = DimensionConverter(holder.view.resources)
         val imageCornerTransformation = if (messageLayout is TimelineMessageLayout.Bubble) {
@@ -75,14 +76,27 @@ abstract class MessageImageVideoItem : AbsMessageItem<MessageImageVideoItem.Hold
         holder.imageView.onClick(clickListener)
         holder.imageView.setOnLongClickListener(attributes.itemLongClickListener)
         ViewCompat.setTransitionName(holder.imageView, "imagePreview_${id()}")
-        holder.mediaContentView.onClick(attributes.itemClickListener)
+       // holder.mediaContentView.onClick(attributes.itemClickListener)
+        holder.mediaContentView.setOnClickListener {
+            if (playable) {
+                holder.playContentView.visibility = View.GONE
+                attributes.itemClickListener?.invoke(holder.mediaContentView)
+            } else {
+                attributes.itemClickListener?.invoke(holder.mediaContentView)
+            }
+        }
         holder.mediaContentView.setOnLongClickListener(attributes.itemLongClickListener)
 
         val isImageMessage = attributes.informationData.messageType in listOf(MessageType.MSGTYPE_IMAGE, MessageType.MSGTYPE_STICKER_LOCAL)
         val autoplayAnimatedImages = attributes.autoplayAnimatedImages
 
         holder.playContentView.setOnClickListener {
+
+
+            holder.playContentView.visibility = View.GONE
             clickListener?.invoke(holder.imageView)
+
+
         }
 
 
@@ -107,6 +121,8 @@ abstract class MessageImageVideoItem : AbsMessageItem<MessageImageVideoItem.Hold
     override fun unbind(holder: Holder) {
         Glide.with(holder.view.context.applicationContext).clear(holder.imageView)
         imageContentRenderer.clear(holder.imageView)
+        holder.imageView.visibility = View.VISIBLE
+        holder.playContentView.visibility = View.GONE
         contentUploadStateTrackerBinder.unbind(attributes.informationData.eventId)
         holder.imageView.setOnClickListener(null)
         holder.imageView.setOnLongClickListener(null)

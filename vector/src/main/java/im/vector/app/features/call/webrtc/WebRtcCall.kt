@@ -719,6 +719,17 @@ class WebRtcCall(
                 inviteTimeout = null
                 // Set Ended state first — triggers immediate UI update (FIX #2).
                 mxCall.state = CallState.Ended(reason ?: EndCallReason.USER_HANGUP)
+//                withContext(Dispatchers.Main) {
+//                    CallAndroidService.onCallTerminated(context, callId, reason ?: EndCallReason.USER_HANGUP, rejected)
+//                }
+                withContext(Dispatchers.Main) {
+                    CallAndroidService.onCallTerminated(
+                            context = context,
+                            callId = callId,
+                            endCallReason = reason ?: EndCallReason.USER_HANGUP,
+                            rejected = rejected
+                    )
+                }
                 release()
                 onCallEnded(callId, reason ?: EndCallReason.USER_HANGUP, rejected)
             }

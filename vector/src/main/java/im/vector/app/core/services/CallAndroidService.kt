@@ -60,8 +60,8 @@ class CallAndroidService : VectorAndroidService() {
     @Inject lateinit var avatarRenderer: AvatarRenderer
     @Inject lateinit var alertManager: PopupAlertManager
     @Inject lateinit var vectorPreferences: VectorPreferences
+    @Inject lateinit var incomingCallRinger: IncomingCallRinger
 
-    private var callRingPlayerIncoming: CallRingPlayerIncoming? = null
     private var callRingPlayerOutgoing: CallRingPlayerOutgoing? = null
 
     // A media button receiver receives and helps translate hardware media playback buttons,
@@ -81,13 +81,12 @@ class CallAndroidService : VectorAndroidService() {
     override fun onCreate() {
         super.onCreate()
         notificationManager = NotificationManagerCompat.from(this)
-        callRingPlayerIncoming = CallRingPlayerIncoming(applicationContext, notificationUtils)
         callRingPlayerOutgoing = CallRingPlayerOutgoing(applicationContext, callManager)
     }
 
     override fun onDestroy() {
         super.onDestroy()
-        callRingPlayerIncoming?.stop()
+        incomingCallRinger.stop()
         callRingPlayerOutgoing?.stop()
         mediaSession?.release()
         mediaSession = null
@@ -115,7 +114,7 @@ class CallAndroidService : VectorAndroidService() {
                         ?.let { callManager.getCallById(it) }
                         ?.nativeRoomId
                         ?.let { vectorPreferences.getRoomNotificationTone(it) }
-                callRingPlayerIncoming?.start(fromBg, customTone)
+                incomingCallRinger.start(fromBg, customTone)
                 displayIncomingCallNotification(intent)
             }
             ACTION_OUTGOING_RINGING_CALL -> {
@@ -124,7 +123,7 @@ class CallAndroidService : VectorAndroidService() {
                 displayOutgoingRingingCallNotification(intent)
             }
             ACTION_ONGOING_CALL -> {
-                callRingPlayerIncoming?.stop()
+                incomingCallRinger.stop()
                 callRingPlayerOutgoing?.stop()
                 displayCallInProgressNotification(intent)
             }
@@ -196,14 +195,20 @@ class CallAndroidService : VectorAndroidService() {
         val endCallReason = intent.getSerializableExtraCompat<EndCallReason>(EXTRA_END_CALL_REASON)
         val rejected = intent.getBooleanExtra(EXTRA_END_CALL_REJECTED, false)
         alertManager.cancelAlert(callId)
-        
-        callRingPlayerIncoming?.stop()
+
+        incomingCallRinger.stop()
         callRingPlayerOutgoing?.stop()
         
         val terminatedCall = knownCalls.remove(callId)
         if (terminatedCall == null) {
             Timber.tag(loggerTag.value).v("Call terminated for unknown call $callId")
-            handleUnexpectedState(callId)
+           // handleUnexpectedState(callId)
+            if (knownCalls.isEmpty()) {
+                stopForegroundCompat()
+                mediaSession?.isActive = false
+                myStopSelf()
+                stopService(Intent(this, MicrophoneAccessService::class.java))
+            }
             return
         }
         val notification = notificationUtils.buildCallEndedNotification(false)
@@ -285,7 +290,7 @@ class CallAndroidService : VectorAndroidService() {
 
     private fun handleUnexpectedState(callId: String?) {
         Timber.tag(loggerTag.value).v("Fallback to clear everything")
-        callRingPlayerIncoming?.stop()
+        incomingCallRinger.stop()
         callRingPlayerOutgoing?.stop()
         val notification = notificationUtils.buildCallEndedNotification(false)
         if (callId != null) {

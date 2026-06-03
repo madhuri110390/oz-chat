@@ -4,13 +4,14 @@ package im.vector.app.push.fcm
 
 import android.content.Context
 import android.os.PowerManager
+import dagger.hilt.android.qualifiers.ApplicationContext
 import timber.log.Timber
 import javax.inject.Inject
 import javax.inject.Singleton
 
 @Singleton
 class ScreenWakeManager @Inject constructor(
-        private val context: Context,
+        @ApplicationContext private val context: Context,
 ) {
     private var screenWakeLock: PowerManager.WakeLock? = null
     private var cpuWakeLock: PowerManager.WakeLock? = null

@@ -6,12 +6,17 @@ import android.app.Service
 import android.content.Intent
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import dagger.hilt.android.AndroidEntryPoint
 import im.vector.app.R
+import im.vector.app.core.services.IncomingCallRinger
 import im.vector.app.features.call.VectorCallActivity
+import im.vector.lib.strings.CommonStrings
+import javax.inject.Inject
 
-// CallForegroundService.kt
-// CallForegroundService.kt
+@AndroidEntryPoint
 class CallForegroundService : Service() {
+
+    @Inject lateinit var incomingCallRinger: IncomingCallRinger
 
     companion object {
         const val ACTION_INCOMING_CALL = "action_incoming_call"
@@ -30,7 +35,9 @@ class CallForegroundService : Service() {
         val callId = intent.getStringExtra("callId") ?: return
         val roomId = intent.getStringExtra("room_id") ?: return
 
-        // ✅ Must call startForeground immediately (within 5 seconds)
+        incomingCallRinger.start(fromBg = true, roomId = roomId)
+
+        // Must call startForeground immediately (within 5 seconds)
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
             startForeground(
                     NotificationUtils.CALL_NOTIFICATION_ID,
@@ -46,11 +53,16 @@ class CallForegroundService : Service() {
     }
 
     private fun buildCallNotification(callId: String, roomId: String): Notification {
-        // Full screen intent — shows on locked screen
-        val fullScreenIntent = Intent(this, VectorCallActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
-            putExtra("callId", callId)
-            putExtra("room_id", roomId)
+        val fullScreenIntent = VectorCallActivity.newIntent(
+                context = this,
+                callId = callId,
+                signalingRoomId = roomId,
+                otherUserId = "",
+                isIncomingCall = true,
+                isVideoCall = false,
+                mode = null,
+        ).apply {
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
         }
 
         val fullScreenPi = PendingIntent.getActivity(
@@ -79,8 +91,8 @@ class CallForegroundService : Service() {
         )
 
         return NotificationCompat.Builder(this, NotificationUtils.CALL_NOTIFICATION_CHANNEL_ID)
-                .setContentTitle("Incoming Call")
-                .setContentText("You have an incoming call")
+                .setContentTitle(getString(CommonStrings.incoming_voice_call))
+                .setContentText(getString(CommonStrings.incoming_voice_call))
                 .setSmallIcon(R.drawable.oz_chat_playstore_icon)
                 .setPriority(NotificationCompat.PRIORITY_MAX)
                 .setCategory(NotificationCompat.CATEGORY_CALL)       // ✅ Critical for lock screen

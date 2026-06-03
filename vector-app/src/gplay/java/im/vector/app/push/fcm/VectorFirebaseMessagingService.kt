@@ -1,5 +1,8 @@
 package im.vector.app.push.fcm
 
+import android.content.Intent
+import android.os.Build
+import androidx.core.content.ContextCompat
 import com.google.firebase.messaging.FirebaseMessagingService
 import com.google.firebase.messaging.RemoteMessage
 import dagger.hilt.android.AndroidEntryPoint
@@ -11,14 +14,17 @@ import im.vector.app.core.pushers.PushParser
 import im.vector.app.core.pushers.PushersManager
 import im.vector.app.core.pushers.UnifiedPushHelper
 import im.vector.app.core.pushers.VectorPushHandler
-import im.vector.app.features.mdm.MdmData
-import im.vector.app.features.mdm.MdmService
+import im.vector.app.core.services.CallAndroidService
+import im.vector.app.core.services.IncomingCallRinger
+import im.vector.app.features.call.webrtc.WebRtcCallManager
+import im.vector.app.features.notifications.CallForegroundService
 import im.vector.app.features.notifications.NotificationUtils
-
 import im.vector.app.features.settings.VectorPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.matrix.android.sdk.api.logger.LoggerTag
+import org.matrix.android.sdk.api.session.call.CallState
 import timber.log.Timber
 import javax.inject.Inject
 
@@ -34,14 +40,14 @@ class VectorFirebaseMessagingService : FirebaseMessagingService() {
     @Inject lateinit var pushParser: PushParser
     @Inject lateinit var vectorPushHandler: VectorPushHandler
     @Inject lateinit var unifiedPushHelper: UnifiedPushHelper
-    @Inject lateinit var mdmService: MdmService
     @Inject lateinit var notificationUtils: NotificationUtils
     @Inject lateinit var screenWakeManager: ScreenWakeManager
+    @Inject lateinit var incomingCallRinger: IncomingCallRinger
+    @Inject lateinit var webRtcCallManager: WebRtcCallManager
     @Inject lateinit var appScope: CoroutineScope
 
-
     override fun onNewToken(token: String) {
-        Timber.tag(loggerTag.value).d("onNewToken: New Firebase token received, length=${token.length}")
+        Timber.tag(loggerTag.value).d("onNewToken fired, current FCM token length=${token.length}")
         fcmHelper.storeFcmToken(token)
         if (vectorPreferences.areNotificationEnabledForDevice() &&
                 activeSessionHolder.hasActiveSession() &&
@@ -49,136 +55,192 @@ class VectorFirebaseMessagingService : FirebaseMessagingService() {
         ) {
             appScope.launch {
                 try {
-                    // Unregister stale pushers across the current device
-                    Timber.tag(loggerTag.value).d("onNewToken: Checking and unregistering stale pushers from Matrix server")
                     pushersManager.unregisterStalePushers(token)
-
-                    Timber.tag(loggerTag.value).d("onNewToken: Sending explicit Matrix push registration for new token")
-                    try {
-                        pushersManager.registerPusherWithFcmKey(token)
-                        Timber.tag(loggerTag.value).d("onNewToken: Successfully registered new FCM pusher on Matrix server")
-                    } catch (e: Exception) {
-                        Timber.tag(loggerTag.value).e(e, "onNewToken: Failed to register new FCM pusher on Matrix server")
-                    }
+                    pushersManager.enqueueRegisterPusherWithFcmKey(token)
+                    Timber.tag(loggerTag.value).d("token registered to Matrix")
                 } catch (e: Exception) {
-                    Timber.tag(loggerTag.value).e(e, "Failed to manage pusher lifecycle on new token")
+                    Timber.tag(loggerTag.value).e(e, "onNewToken: Matrix push registration failed")
                 }
             }
         }
     }
 
-    override fun onMessageReceived(message: RemoteMessage) {
-        Timber.tag(loggerTag.value).d("=== FCM RECEIVED === keys=%s", message.data.keys)
+    override  fun onMessageReceived(message: RemoteMessage) {
+        val data = message.data
+        Timber.tag(loggerTag.value).d("incoming push received keys=%s", data.keys)
 
-        if (!vectorPreferences.areNotificationEnabledForDevice()) return
+        if (!vectorPreferences.areNotificationEnabledForDevice()) {
+            Timber.tag(loggerTag.value).w("Push ignored: notifications disabled for device")
+            return
+        }
 
-        // 1. Wake screen immediately — this is what turns on the display from locked state
+        val session = activeSessionHolder.getSafeActiveSession()
+                ?: runBlocking { activeSessionHolder.getOrInitializeSession() }
+
+        var isCallPush = FcmPushPayloadHelper.isIncomingCallPush(data)
+        if (!isCallPush && session != null) {
+            isCallPush = runBlocking {
+                FcmPushPayloadHelper.resolveIsCallPush(session, data)
+            }
+            if (isCallPush) {
+                Timber.tag(loggerTag.value).d("call push resolved from event_id (m.call.invite)")
+            }
+        }
+
+        val callId = FcmPushPayloadHelper.extractCallId(data)
+        val roomId = data["room_id"]
+
         screenWakeManager.wakeScreenForNotification()
 
-        // 2. Skip placeholder if app is in foreground and showing the same room
-        val data = message.data
-        val roomId = data["room_id"]
         val isAppInForeground = ProcessLifecycleOwner.get()
-            .lifecycle.currentState
-            .isAtLeast(Lifecycle.State.STARTED)
-        if (activeSessionHolder.hasActiveSession() &&
+                .lifecycle.currentState
+                .isAtLeast(Lifecycle.State.STARTED)
+        val skipPlaceholder = !isCallPush &&
+                activeSessionHolder.hasActiveSession() &&
                 roomId != null &&
                 isAppInForeground &&
-                roomId == notificationUtils.notificationDrawerManager.currentRoomId) {
+                roomId == notificationUtils.notificationDrawerManager.currentRoomId
+
+        if (skipPlaceholder) {
             Timber.tag(loggerTag.value).d("Skip placeholder: user is already in the room")
         } else {
-            // Show placeholder instantly so user sees something on the woken screen
             val placeholderTag = "PENDING_${message.messageId ?: System.currentTimeMillis()}"
-            val callId = data["call_id"] ?: data["callId"]
-            showGenericNotificationFromFcm(message, placeholderTag, callId)
-
-            // 3. Run Matrix sync in background — replaces placeholder with rich notification
-            appScope.launch {
-                try {
-                    if (data.isNotEmpty()) {
-                        vectorPushHandler.handle(pushParser.parsePushDataFcm(data))
-                    }
-                    // Rich notification now posted — remove placeholder
-                    notificationUtils.cancelNotificationMessage(
-                            placeholderTag,
-                            NotificationUtils.ROOM_MESSAGES_NOTIFICATION_ID
-                    )
-                } catch (e: Exception) {
-                    Timber.tag(loggerTag.value).e(e, "Push handling failed — placeholder kept")
-                } finally {
-                    screenWakeManager.releaseCpuWake()
-                }
+            if (isCallPush) {
+                incomingCallRinger.start(fromBg = true, roomId = roomId)
+                Timber.tag(loggerTag.value).d("incoming call ring started (8 cycles)")
             }
+            showGenericNotificationFromFcm(message, placeholderTag, callId, isCallPush)
+            if (isCallPush && callId != null && roomId != null) {
+                startCallForegroundService(callId, roomId)
+            }
+        }
+
+        try {
+            if (data.isNotEmpty()) {
+                vectorPushHandler.handleSynchronously(pushParser.parsePushDataFcm(data))
+            }
+            promoteToVoipCallIfNeeded(isCallPush, roomId)
+        } catch (e: Exception) {
+            Timber.tag(loggerTag.value).e(e, "Push handling failed")
+        } finally {
+            screenWakeManager.releaseCpuWake()
         }
     }
 
-    private fun showGenericNotificationFromFcm(message: RemoteMessage, overrideTag: String, callId: String?) {
-        if (!notificationUtils.areSystemNotificationsEnabled()) return
+    /**
+     * After sync, WebRTC may have the real call — use CallAndroidService for full call UI + ring.
+     */
+    private fun promoteToVoipCallIfNeeded(alreadyCallPush: Boolean, roomId: String?) {
+        val ringingCall = webRtcCallManager.getCalls().firstOrNull {
+            it.mxCall.state is CallState.LocalRinging
+        } ?: return
+
+        val callId = ringingCall.mxCall.callId
+        Timber.tag(loggerTag.value).d("VoIP incoming call after sync callId=$callId")
+        if (!alreadyCallPush) {
+            incomingCallRinger.start(fromBg = true, roomId = roomId ?: ringingCall.nativeRoomId)
+        }
+        CallAndroidService.onIncomingCallRinging(
+                context = applicationContext,
+                callId = callId,
+                isInBackground = true,
+        )
+    }
+
+    private fun startCallForegroundService(callId: String, roomId: String) {
+        try {
+            val intent = Intent(this, CallForegroundService::class.java).apply {
+                action = CallForegroundService.ACTION_INCOMING_CALL
+                putExtra("callId", callId)
+                putExtra("room_id", roomId)
+            }
+            ContextCompat.startForegroundService(this, intent)
+            Timber.tag(loggerTag.value).d("lock screen call notification shown (foreground service)")
+        } catch (e: Exception) {
+            Timber.tag(loggerTag.value).e(e, "Failed to start CallForegroundService")
+        }
+    }
+
+    private fun showGenericNotificationFromFcm(
+            message: RemoteMessage,
+            overrideTag: String,
+            callId: String?,
+            isCall: Boolean,
+    ) {
+        if (!notificationUtils.areSystemNotificationsEnabled()) {
+            Timber.tag(loggerTag.value).w("System notifications disabled — placeholder skipped")
+            return
+        }
 
         try {
             notificationUtils.createNotificationChannels()
-
             val data = message.data
 
-            val isCall = data["type"] == "m.call.invite"                // ✅ Fixed: removed loose `callId != null` fallback;
-                    || data["type"] == "call"                           //    type-based check is authoritative
-
-            val title = message.notification?.title                     // ✅ Fixed: guaranteed non-null fallback so notification
-                    ?: data["title"]                                    //    title is never blank
+            val title = message.notification?.title
+                    ?: data["title"]
                     ?: data["subject"]
+                    ?: data["sender_display_name"]
+                    ?: data["room_name"]
                     ?: if (isCall) "Incoming Call" else "New Message"
 
             val body = message.notification?.body
                     ?: data["body"]
                     ?: data["message"]
-                    ?: if (isCall) "You have an incoming call" else "New message received"
+                    ?: if (isCall) {
+                        null // use incoming_voice_call string from NotificationUtils
+                    } else {
+                        data["content"]
+                    }
+                    ?: if (isCall) null else "New message received"
 
-            val isNoisy = data["noisy"]?.toBooleanStrictOrNull() ?: true // ✅ Fixed: derive noisiness from payload; default true
+            val isNoisy = data["noisy"]?.toBooleanStrictOrNull()
+                    ?: FcmPushPayloadHelper.isHighPriorityPush(data)
+                    ?: true
 
-            val notificationId = if (isCall)                            // ✅ Extracted for clarity / easier unit-testing
+            val notificationId = if (isCall) {
                 NotificationUtils.CALL_NOTIFICATION_ID
-            else
+            } else {
                 NotificationUtils.ROOM_MESSAGES_NOTIFICATION_ID
+            }
 
             if (isCall) {
-                Timber.tag(loggerTag.value).d("push received: call invite detected")
-                val isAppForeground = androidx.lifecycle.ProcessLifecycleOwner.get().lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)
-                val appState = if (isAppForeground) "foreground" else "background/locked"
-                Timber.tag(loggerTag.value).d("app state: $appState")
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                    val permissionState = androidx.core.content.ContextCompat.checkSelfPermission(this, android.Manifest.permission.POST_NOTIFICATIONS)
-                    Timber.tag(loggerTag.value).d("permission state for notifications: $permissionState")
+                Timber.tag(loggerTag.value).d("incoming call invite received callId=$callId roomId=${data["room_id"]}")
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    val granted = ContextCompat.checkSelfPermission(
+                            this, android.Manifest.permission.POST_NOTIFICATIONS
+                    ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                    Timber.tag(loggerTag.value).d("POST_NOTIFICATIONS granted=$granted")
                 }
-                val notifManager = getSystemService(android.content.Context.NOTIFICATION_SERVICE) as? android.app.NotificationManager
-                if (android.os.Build.VERSION.SDK_INT >= 34) {
-                    Timber.tag(loggerTag.value).d("full-screen intent availability: ${notifManager?.canUseFullScreenIntent()}")
+                if (Build.VERSION.SDK_INT >= 34) {
+                    val nm = getSystemService(NOTIFICATION_SERVICE) as? android.app.NotificationManager
+                    Timber.tag(loggerTag.value).d("canUseFullScreenIntent=${nm?.canUseFullScreenIntent()}")
                 }
-                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.O) {
-                    val channel = notifManager?.getNotificationChannel(NotificationUtils.CALL_NOTIFICATION_CHANNEL_ID)
-                    Timber.tag(loggerTag.value).d("notification channel selected: ${channel?.id}, importance: ${channel?.importance}, sound: ${channel?.sound}")
-                }
+            } else {
+                Timber.tag(loggerTag.value).d("incoming message push roomId=${data["room_id"]}")
             }
 
             notificationUtils.showNotificationMessage(
                     tag = overrideTag,
                     id = notificationId,
                     notification = notificationUtils.buildGenericPushNotification(
-                            title    = title,
-                            body     = body,
-                            isCall   = isCall,
-                            roomId   = data["room_id"],
+                            title = title,
+                            body = body,
+                            isCall = isCall,
+                            roomId = data["room_id"],
                             threadId = data["thread_id"],
-                            noisy    = isNoisy,
-                            callId   = callId, // ✅ Fixed: pass callId
+                            noisy = isNoisy,
+                            callId = callId,
                     ).build(),
             )
+
             if (isCall) {
-                Timber.tag(loggerTag.value).d("notification posted: full-screen intent attempted")
+                Timber.tag(loggerTag.value).d("lock screen call notification shown")
             }
         } catch (e: Exception) {
-            Timber.tag(loggerTag.value).e(e, "Failed to show placeholder notification")
+            Timber.tag(loggerTag.value).e(e, "Failed to show FCM notification")
         }
     }
+
     override fun onDestroy() {
         super.onDestroy()
     }

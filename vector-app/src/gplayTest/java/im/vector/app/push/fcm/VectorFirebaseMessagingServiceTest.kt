@@ -10,7 +10,8 @@ import im.vector.app.core.pushers.VectorPushHandler
 import im.vector.app.features.mdm.MdmData
 import im.vector.app.features.mdm.MdmService
 import im.vector.app.features.settings.VectorPreferences
-import im.vector.app.features.settings.UnifiedPushHelper
+import im.vector.app.core.pushers.UnifiedPushHelper
+import im.vector.app.features.notifications.NotificationUtils
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.test.TestScope
@@ -45,6 +46,8 @@ class VectorFirebaseMessagingServiceTest {
     @Mock private lateinit var vectorPushHandler: VectorPushHandler
     @Mock private lateinit var unifiedPushHelper: UnifiedPushHelper
     @Mock private lateinit var mdmService: MdmService
+    @Mock private lateinit var notificationUtils: NotificationUtils
+    @Mock private lateinit var screenWakeManager: ScreenWakeManager
     @Mock private lateinit var appScope: CoroutineScope
 
     private lateinit var closeable: AutoCloseable
@@ -63,7 +66,10 @@ class VectorFirebaseMessagingServiceTest {
         service.vectorPushHandler = vectorPushHandler
         service.unifiedPushHelper = unifiedPushHelper
         service.mdmService = mdmService
+        service.notificationUtils = notificationUtils
+        service.screenWakeManager = screenWakeManager
         service.appScope = appScope
+        Mockito.`when`(vectorPreferences.areNotificationEnabledForDevice()).thenReturn(true)
     }
 
     @After
@@ -78,19 +84,16 @@ class VectorFirebaseMessagingServiceTest {
         Mockito.`when`(vectorPreferences.areNotificationEnabledForDevice()).thenReturn(true)
         Mockito.`when`(activeSessionHolder.hasActiveSession()).thenReturn(true)
         Mockito.`when`(unifiedPushHelper.isEmbeddedDistributor()).thenReturn(true)
-        // Mock MDM gateway URL
-        Mockito.`when`(mdmService.getData(Mockito.any(), Mockito.anyString()))
-            .thenReturn("https://example.com/push")
         // Mock appScope launch to execute immediately
         val testScope = TestScope()
         service.appScope = testScope
+        testScope.testScheduler.advanceUntilIdle()
         // Act
         service.onNewToken(token)
-        // Assert that enqueueRegisterPusher was called with expected arguments
-        Mockito.verify(pushersManager).enqueueRegisterPusher(
-            Mockito.eq(token),
-            Mockito.eq("https://example.com/push")
-        )
+        testScope.testScheduler.advanceUntilIdle()
+        // Assert stale pushers are removed and new token is registered
+        Mockito.verify(pushersManager).unregisterStalePushers(token)
+        Mockito.verify(pushersManager).enqueueRegisterPusherWithFcmKey(token)
     }
 
     @Test
@@ -106,17 +109,27 @@ class VectorFirebaseMessagingServiceTest {
     }
 
     @Test
-    fun `onMessageReceived parses and forwards push data`() {
+    fun `onMessageReceived wakes screen and forwards push data`() = runTest {
         val data = mapOf("key" to "value")
         val remoteMessage = RemoteMessage.Builder("test@fcm")
             .setData(data)
             .build()
-        // Mock parser to return a dummy object
-        val parsed = Any()
+        val parsed = im.vector.app.core.pushers.PushData(
+                unifiedPushData = im.vector.app.core.pushers.UnifiedPushData(
+                        eventId = null,
+                        roomId = null,
+                        unread = null,
+                        missedCalls = null,
+                ),
+                gateway = null,
+        )
         Mockito.`when`(pushParser.parsePushDataFcm(data)).thenReturn(parsed)
-        // Act
+        Mockito.`when`(notificationUtils.areSystemNotificationsEnabled()).thenReturn(true)
+        val testScope = TestScope()
+        service.appScope = testScope
         service.onMessageReceived(remoteMessage)
-        // Verify parser called and handler invoked
+        testScope.testScheduler.advanceUntilIdle()
+        Mockito.verify(screenWakeManager).wakeScreenForNotification()
         Mockito.verify(pushParser).parsePushDataFcm(data)
         Mockito.verify(vectorPushHandler).handle(parsed)
     }
