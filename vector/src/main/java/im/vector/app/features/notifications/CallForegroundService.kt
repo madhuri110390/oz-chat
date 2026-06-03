@@ -3,6 +3,7 @@ package im.vector.app.features.notifications
 import android.app.Notification
 import android.app.PendingIntent
 import android.app.Service
+import android.content.Context
 import android.content.Intent
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
@@ -21,11 +22,22 @@ class CallForegroundService : Service() {
     companion object {
         const val ACTION_INCOMING_CALL = "action_incoming_call"
         const val ACTION_END_CALL      = "action_end_call"
+        const val ACTION_STOP = "ACTION_STOP"
+        fun stop(context: Context) {
+            val intent = Intent(context, CallForegroundService::class.java).apply {
+                action = ACTION_STOP
+            }
+            context.startService(intent)
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_INCOMING_CALL -> handleIncomingCall(intent)
+            ACTION_STOP -> {
+                stopSelf()
+                return START_NOT_STICKY
+            }
             ACTION_END_CALL      -> stopSelf()
         }
         return START_STICKY  // ✅ Restart if killed

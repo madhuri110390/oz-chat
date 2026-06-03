@@ -194,11 +194,12 @@ class CallAndroidService : VectorAndroidService() {
         val callId = intent.getStringExtra(EXTRA_CALL_ID) ?: ""
         val endCallReason = intent.getSerializableExtraCompat<EndCallReason>(EXTRA_END_CALL_REASON)
         val rejected = intent.getBooleanExtra(EXTRA_END_CALL_REJECTED, false)
-        alertManager.cancelAlert(callId)
-
         incomingCallRinger.stop()
         callRingPlayerOutgoing?.stop()
-        
+
+        alertManager.cancelAlert(callId)
+        notificationManager.cancel(callId.hashCode())
+
         val terminatedCall = knownCalls.remove(callId)
         if (terminatedCall == null) {
             Timber.tag(loggerTag.value).v("Call terminated for unknown call $callId")

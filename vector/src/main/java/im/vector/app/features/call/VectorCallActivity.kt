@@ -111,6 +111,7 @@ class VectorCallActivity :
     @Inject lateinit var notificationDrawerManager: NotificationDrawerManager
     @Inject lateinit var callManager: WebRtcCallManager
     @Inject lateinit var avatarRenderer: AvatarRenderer
+    private var callEndHandled = false
     @Inject lateinit var screenCaptureServiceConnection: ScreenCaptureServiceConnection
     private var callWasAnswered = false
     private val callViewModel: VectorCallViewModel by viewModel()
@@ -173,6 +174,21 @@ class VectorCallActivity :
                             WindowManager.LayoutParams.FLAG_TURN_SCREEN_ON or
                             WindowManager.LayoutParams.FLAG_DISMISS_KEYGUARD
             )
+        }
+        // Existing async observer - keep this
+        callViewModel.onAsync(VectorCallViewState::callState) {
+            if (it is CallState.Ended) {
+                handleCallEnded(it)
+            }
+        }
+
+// ADD THIS — direct state observer as safety net
+// onAsync can miss transitions; this catches any render pass where state is Ended
+        callViewModel.onEach(VectorCallViewState::callState) { callStateAsync ->
+            val callState = callStateAsync.invoke() ?: return@onEach
+            if (callState is CallState.Ended && !isFinishing && !isDestroyed) {
+                handleCallEnded(callState)
+            }
         }
         super.onCreate(savedInstanceState)
 
@@ -751,9 +767,8 @@ class VectorCallActivity :
 //    }
 
     private fun handleCallEnded(callState: CallState.Ended) {
-        // DO NOT call CallAndroidService.onCallTerminated here —
-        // WebRtcCall.terminate() already does it. Calling it twice
-        // causes race conditions and the banner/ringer not clearing.
+        if (callEndHandled) return
+        callEndHandled = true
 
         handleStopScreenSharingService()
         notificationDrawerManager.clearAllEvents()
@@ -777,8 +792,8 @@ class VectorCallActivity :
                 finish()
             }
             EndCallReason.USER_HANGUP, EndCallReason.REPLACED -> {
-                if (!callWasAnswered){
-                if (isIncomingCall) {
+                if (wasNeverAnswered) {
+                    if (isIncomingCall) {
                         Toast.makeText(this, "Missed voice call", Toast.LENGTH_LONG).show()
                     } else {
                         Toast.makeText(this, "No answer", Toast.LENGTH_LONG).show()

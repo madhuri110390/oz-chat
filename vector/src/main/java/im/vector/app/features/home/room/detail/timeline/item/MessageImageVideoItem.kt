@@ -34,13 +34,16 @@ import org.matrix.android.sdk.api.session.room.model.message.MessageType
 
 @EpoxyModelClass
 abstract class MessageImageVideoItem : AbsMessageItem<MessageImageVideoItem.Holder>() {
-
+    @EpoxyAttribute(EpoxyAttribute.Option.DoNotHash)
+    var itemDoubleTapListener: ClickListener? = null
     @EpoxyAttribute
     lateinit var mediaData: ImageContentRenderer.Data
-
+    @EpoxyAttribute
+    var playbackSpeed: Float = 1.0f
+    var tapJob: Runnable? = null
     @EpoxyAttribute
     var playable: Boolean = false
-
+    var lastTapTime = 0L
     @EpoxyAttribute
     var mode = ImageContentRenderer.Mode.THUMBNAIL
 
@@ -90,14 +93,39 @@ abstract class MessageImageVideoItem : AbsMessageItem<MessageImageVideoItem.Hold
         val isImageMessage = attributes.informationData.messageType in listOf(MessageType.MSGTYPE_IMAGE, MessageType.MSGTYPE_STICKER_LOCAL)
         val autoplayAnimatedImages = attributes.autoplayAnimatedImages
 
+//        holder.playContentView.setOnClickListener {
+//
+//
+//            holder.playContentView.visibility = View.GONE
+//            clickListener?.invoke(holder.imageView)
+//
+//
+//        }
+
+
+
         holder.playContentView.setOnClickListener {
-
-
-            holder.playContentView.visibility = View.GONE
-            clickListener?.invoke(holder.imageView)
-
-
+            val now = System.currentTimeMillis()
+            if (now - lastTapTime < 300L) {
+                // Confirmed double-tap: cancel the pending single-tap action
+                tapJob?.let { holder.playContentView.removeCallbacks(it) }
+                tapJob = null
+               // attributes.itemDoubleTapListener?.invoke(holder.playContentView)
+            } else {
+                // Delay single-tap to allow a second tap to cancel it
+                tapJob = Runnable {
+                    holder.playContentView.visibility = View.GONE
+                    clickListener?.invoke(holder.imageView)
+                }.also { job ->
+                    holder.playContentView.postDelayed(job, 300L)
+                }
+            }
+            lastTapTime = now
         }
+
+        holder.playContentView.tag = playbackSpeed
+
+        val speed = (holder.playContentView.tag as? Float) ?: 1.0f
 
 
         holder.playContentView.visibility = if (playable && isImageMessage && autoplayAnimatedImages) {
@@ -107,6 +135,8 @@ abstract class MessageImageVideoItem : AbsMessageItem<MessageImageVideoItem.Hold
         } else {
             View.GONE
         }
+
+// Single declaration — duplicates removed
         val isMine = attributes.informationData.sentByMe
         val backgroundAttr = if (isMine) {
             im.vector.lib.ui.styles.R.attr.vctr_message_bubble_outbound
@@ -114,7 +144,12 @@ abstract class MessageImageVideoItem : AbsMessageItem<MessageImageVideoItem.Hold
             im.vector.lib.ui.styles.R.attr.vctr_message_bubble_inbound
         }
         val backgroundColor = ThemeUtils.getColor(holder.view.context, backgroundAttr)
-        holder.imageCard.strokeColor = backgroundColor
+
+// Single stroke block — bare strokeColor line at bottom removed
+        with(holder.imageCard) {
+            strokeColor = backgroundColor
+
+        }
 
     }
 
