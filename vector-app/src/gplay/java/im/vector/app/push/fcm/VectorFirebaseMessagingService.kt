@@ -65,7 +65,7 @@ class VectorFirebaseMessagingService : FirebaseMessagingService() {
         }
     }
 
-    override  fun onMessageReceived(message: RemoteMessage) {
+    override fun onMessageReceived(message: RemoteMessage) {
         val data = message.data
         Timber.tag(loggerTag.value).d("incoming push received keys=%s", data.keys)
 
@@ -77,6 +77,7 @@ class VectorFirebaseMessagingService : FirebaseMessagingService() {
         val session = activeSessionHolder.getSafeActiveSession()
                 ?: runBlocking { activeSessionHolder.getOrInitializeSession() }
 
+        // Resolve call push — first from payload directly, then from Matrix event if needed
         var isCallPush = FcmPushPayloadHelper.isIncomingCallPush(data)
         if (!isCallPush && session != null) {
             isCallPush = runBlocking {
@@ -87,6 +88,7 @@ class VectorFirebaseMessagingService : FirebaseMessagingService() {
             }
         }
 
+        // These must be declared AFTER isCallPush is resolved
         val callId = FcmPushPayloadHelper.extractCallId(data)
         val roomId = data["room_id"]
 
@@ -95,21 +97,33 @@ class VectorFirebaseMessagingService : FirebaseMessagingService() {
         val isAppInForeground = ProcessLifecycleOwner.get()
                 .lifecycle.currentState
                 .isAtLeast(Lifecycle.State.STARTED)
-        val skipPlaceholder = !isCallPush &&
-                activeSessionHolder.hasActiveSession() &&
-                roomId != null &&
-                isAppInForeground &&
-                roomId == notificationUtils.notificationDrawerManager.currentRoomId
+
+        // Suppress non-call notifications when a call is active
+        val hasActiveCall = webRtcCallManager.getCalls().isNotEmpty()
+
+        val skipPlaceholder = !isCallPush && (
+                hasActiveCall ||
+                        (activeSessionHolder.hasActiveSession() &&
+                                roomId != null &&
+                                isAppInForeground &&
+                                roomId == notificationUtils.notificationDrawerManager.currentRoomId)
+                )
 
         if (skipPlaceholder) {
-            Timber.tag(loggerTag.value).d("Skip placeholder: user is already in the room")
+            Timber.tag(loggerTag.value).d("Skip placeholder: suppressed during active call or user in room")
         } else {
             val placeholderTag = "PENDING_${message.messageId ?: System.currentTimeMillis()}"
+
             if (isCallPush) {
+                // Cancel any stale call notifications before showing new one
+                notificationUtils.cancelNotificationMessage(null, NotificationUtils.CALL_NOTIFICATION_ID)
+                notificationUtils.cancelAllNotifications()
                 incomingCallRinger.start(fromBg = true, roomId = roomId)
-                Timber.tag(loggerTag.value).d("incoming call ring started (8 cycles)")
+                Timber.tag(loggerTag.value).d("incoming call ring started")
             }
+
             showGenericNotificationFromFcm(message, placeholderTag, callId, isCallPush)
+
             if (isCallPush && callId != null && roomId != null) {
                 startCallForegroundService(callId, roomId)
             }
@@ -128,7 +142,8 @@ class VectorFirebaseMessagingService : FirebaseMessagingService() {
     }
 
     /**
-     * After sync, WebRTC may have the real call — use CallAndroidService for full call UI + ring.
+     * After sync, WebRTC may have the real call object — hand off to CallAndroidService
+     * for full call UI + ringtone.
      */
     private fun promoteToVoipCallIfNeeded(alreadyCallPush: Boolean, roomId: String?) {
         val ringingCall = webRtcCallManager.getCalls().firstOrNull {
@@ -176,22 +191,19 @@ class VectorFirebaseMessagingService : FirebaseMessagingService() {
             notificationUtils.createNotificationChannels()
             val data = message.data
 
+            // Prioritise sender_display_name so caller name shows instead of "Incoming Call"
             val title = message.notification?.title
+                    ?: data["sender_display_name"]
                     ?: data["title"]
                     ?: data["subject"]
-                    ?: data["sender_display_name"]
                     ?: data["room_name"]
                     ?: if (isCall) "Incoming Call" else "New Message"
 
             val body = message.notification?.body
                     ?: data["body"]
                     ?: data["message"]
-                    ?: if (isCall) {
-                        null // use incoming_voice_call string from NotificationUtils
-                    } else {
-                        data["content"]
-                    }
-                    ?: if (isCall) null else "New message received"
+                    ?: if (isCall) null else data["content"]
+                            ?: if (isCall) null else "New message received"
 
             val isNoisy = data["noisy"]?.toBooleanStrictOrNull()
                     ?: FcmPushPayloadHelper.isHighPriorityPush(data)
@@ -218,7 +230,12 @@ class VectorFirebaseMessagingService : FirebaseMessagingService() {
             } else {
                 Timber.tag(loggerTag.value).d("incoming message push roomId=${data["room_id"]}")
             }
-
+            if (isCall) {
+                // Cancel any stale message notifications before showing call notification
+                notificationUtils.cancelNotificationMessage(
+                        null, NotificationUtils.ROOM_MESSAGES_NOTIFICATION_ID
+                )
+            }
             notificationUtils.showNotificationMessage(
                     tag = overrideTag,
                     id = notificationId,

@@ -398,6 +398,7 @@ class NotificationUtils @Inject constructor(
             call: WebRtcCall,
             title: String,
             fromBg: Boolean,
+            avatarBitmap: Bitmap? = null,
     ): Notification {
         val accentColor = ContextCompat.getColor(context, im.vector.lib.ui.styles.R.color.notification_accent_color)
 
@@ -450,16 +451,18 @@ class NotificationUtils @Inject constructor(
         // channel sound, to avoid two ringtones playing simultaneously.
 
         return NotificationCompat.Builder(context, channelId)
-                .setContentTitle(ensureTitleNotEmpty(title))
+                .setContentTitle(ensureTitleNotEmpty(title))  // title IS the caller name — already correct
                 .apply {
                     if (call.mxCall.isVideoCall) {
                         setContentText(stringProvider.getString(CommonStrings.incoming_video_call))
-                        setSmallIcon(R.drawable.ic_call_answer_video)
                     } else {
                         setContentText(stringProvider.getString(CommonStrings.incoming_voice_call))
-                        setSmallIcon(R.drawable.ic_call_answer)
                     }
+                    setSmallIcon(R.drawable.oz_chat_playstore_icon)  // always use app icon
                 }
+                .setLargeIcon(
+                        BitmapFactory.decodeResource(context.resources, R.drawable.oz_chat_playstore_icon)
+                )
                 .setCategory(NotificationCompat.CATEGORY_CALL)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
                 .setColor(ThemeUtils.getColor(context, android.R.attr.colorPrimary))
@@ -509,7 +512,7 @@ class NotificationUtils @Inject constructor(
                     if (call.mxCall.isVideoCall) {
                         setSmallIcon(R.drawable.ic_call_answer_video)
                     } else {
-                        setSmallIcon(R.drawable.ic_call_answer)
+                        setSmallIcon(R.drawable.oz_chat_playstore_icon)
                     }
                 }
                 .setCategory(NotificationCompat.CATEGORY_CALL)

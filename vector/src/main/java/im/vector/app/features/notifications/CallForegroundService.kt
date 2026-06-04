@@ -7,6 +7,7 @@ import android.content.Context
 import android.content.Intent
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import androidx.core.app.NotificationManagerCompat
 import dagger.hilt.android.AndroidEntryPoint
 import im.vector.app.R
 import im.vector.app.core.services.IncomingCallRinger
@@ -21,26 +22,59 @@ class CallForegroundService : Service() {
 
     companion object {
         const val ACTION_INCOMING_CALL = "action_incoming_call"
-        const val ACTION_END_CALL      = "action_end_call"
+        const val ACTION_END_CALL = "action_end_call"
         const val ACTION_STOP = "ACTION_STOP"
+
         fun stop(context: Context) {
+            // Cancel ALL possible notification IDs used by call notifications
+            val nm = NotificationManagerCompat.from(context)
+            nm.cancel(NotificationUtils.CALL_NOTIFICATION_ID)
+            nm.cancelAll()  // ← nuclear option — clears everything
             val intent = Intent(context, CallForegroundService::class.java).apply {
                 action = ACTION_STOP
             }
-            context.startService(intent)
+            try {
+                context.startService(intent)
+            } catch (e: Exception) {
+                // Service may already be dead — ignore
+            }
         }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_INCOMING_CALL -> handleIncomingCall(intent)
-            ACTION_STOP -> {
-                stopSelf()
+            ACTION_STOP, ACTION_END_CALL -> {
+                stopRingerAndSelf()
                 return START_NOT_STICKY
             }
-            ACTION_END_CALL      -> stopSelf()
         }
-        return START_STICKY  // ✅ Restart if killed
+        return START_STICKY
+    }
+
+    // Always stop ringer when service is destroyed — covers all exit paths
+    override fun onDestroy() {
+        incomingCallRinger.stop()
+        NotificationManagerCompat.from(this).cancel(NotificationUtils.CALL_NOTIFICATION_ID)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        } else {
+            @Suppress("DEPRECATION")
+            stopForeground(true)
+        }
+        super.onDestroy()
+    }
+
+    private fun stopRingerAndSelf() {
+        incomingCallRinger.stop()
+        NotificationManagerCompat.from(this).cancel(NotificationUtils.CALL_NOTIFICATION_ID)
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.N) {
+            stopForeground(STOP_FOREGROUND_REMOVE)
+        } else {
+            @Suppress("DEPRECATION")
+            stopForeground(true)
+        }
+        stopSelf()
     }
 
     private fun handleIncomingCall(intent: Intent) {
@@ -49,7 +83,6 @@ class CallForegroundService : Service() {
 
         incomingCallRinger.start(fromBg = true, roomId = roomId)
 
-        // Must call startForeground immediately (within 5 seconds)
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
             startForeground(
                     NotificationUtils.CALL_NOTIFICATION_ID,
@@ -82,7 +115,6 @@ class CallForegroundService : Service() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Accept action
         val acceptPi = PendingIntent.getBroadcast(
                 this, 1,
                 Intent(this, CallActionReceiver::class.java).apply {
@@ -92,7 +124,6 @@ class CallForegroundService : Service() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        // Decline action
         val declinePi = PendingIntent.getBroadcast(
                 this, 2,
                 Intent(this, CallActionReceiver::class.java).apply {
@@ -107,11 +138,11 @@ class CallForegroundService : Service() {
                 .setContentText(getString(CommonStrings.incoming_voice_call))
                 .setSmallIcon(R.drawable.oz_chat_playstore_icon)
                 .setPriority(NotificationCompat.PRIORITY_MAX)
-                .setCategory(NotificationCompat.CATEGORY_CALL)       // ✅ Critical for lock screen
-                .setFullScreenIntent(fullScreenPi, true)             // ✅ Shows on locked screen
+                .setCategory(NotificationCompat.CATEGORY_CALL)
+                .setFullScreenIntent(fullScreenPi, true)
                 .addAction(R.drawable.vector_notification_accept_invitation, "Accept", acceptPi)
                 .addAction(R.drawable.vector_notification_reject_invitation, "Decline", declinePi)
-                .setOngoing(true)                                    // ✅ Cannot be dismissed
+                .setOngoing(true)
                 .setAutoCancel(false)
                 .build()
     }

@@ -79,40 +79,28 @@ abstract class MessageImageVideoItem : AbsMessageItem<MessageImageVideoItem.Hold
         holder.imageView.onClick(clickListener)
         holder.imageView.setOnLongClickListener(attributes.itemLongClickListener)
         ViewCompat.setTransitionName(holder.imageView, "imagePreview_${id()}")
-       // holder.mediaContentView.onClick(attributes.itemClickListener)
-        holder.mediaContentView.setOnClickListener {
-            if (playable) {
-                holder.playContentView.visibility = View.GONE
-                attributes.itemClickListener?.invoke(holder.mediaContentView)
-            } else {
-                attributes.itemClickListener?.invoke(holder.mediaContentView)
-            }
-        }
         holder.mediaContentView.setOnLongClickListener(attributes.itemLongClickListener)
 
-        val isImageMessage = attributes.informationData.messageType in listOf(MessageType.MSGTYPE_IMAGE, MessageType.MSGTYPE_STICKER_LOCAL)
+        val isImageMessage = attributes.informationData.messageType in listOf(
+                MessageType.MSGTYPE_IMAGE, MessageType.MSGTYPE_STICKER_LOCAL
+        )
         val autoplayAnimatedImages = attributes.autoplayAnimatedImages
 
-//        holder.playContentView.setOnClickListener {
-//
-//
-//            holder.playContentView.visibility = View.GONE
-//            clickListener?.invoke(holder.imageView)
-//
-//
-//        }
+        // Initial play button visibility
+        holder.playContentView.visibility = when {
+            playable && isImageMessage && autoplayAnimatedImages -> View.GONE
+            playable -> View.VISIBLE
+            else -> View.GONE
+        }
+        holder.playContentView.background = null
 
-
-
+        // Play button tap — open video on first tap, ignore double-tap
         holder.playContentView.setOnClickListener {
             val now = System.currentTimeMillis()
             if (now - lastTapTime < 300L) {
-                // Confirmed double-tap: cancel the pending single-tap action
                 tapJob?.let { holder.playContentView.removeCallbacks(it) }
                 tapJob = null
-               // attributes.itemDoubleTapListener?.invoke(holder.playContentView)
             } else {
-                // Delay single-tap to allow a second tap to cancel it
                 tapJob = Runnable {
                     holder.playContentView.visibility = View.GONE
                     clickListener?.invoke(holder.imageView)
@@ -122,21 +110,32 @@ abstract class MessageImageVideoItem : AbsMessageItem<MessageImageVideoItem.Hold
             }
             lastTapTime = now
         }
-
         holder.playContentView.tag = playbackSpeed
 
-        val speed = (holder.playContentView.tag as? Float) ?: 1.0f
-
-
-        holder.playContentView.visibility = if (playable && isImageMessage && autoplayAnimatedImages) {
-            View.GONE
-        } else if (playable) {
-            View.VISIBLE
-        } else {
-            View.GONE
+        // SINGLE mediaContentView listener — YouTube style:
+        // If play button visible (not yet playing) → open video
+        // If play button gone (video playing) → toggle controls briefly
+        holder.mediaContentView.setOnClickListener {
+            if (playable) {
+                val isPlaying = holder.playContentView.visibility == View.GONE
+                if (isPlaying) {
+                    // Video is playing — show controls briefly then hide
+                    holder.playContentView.removeCallbacks(null)
+                    holder.playContentView.visibility = View.VISIBLE
+                    holder.playContentView.postDelayed({
+                        holder.playContentView.visibility = View.GONE
+                    }, 3000L)
+                } else {
+                    // Video not started yet — open video viewer
+                    holder.playContentView.visibility = View.GONE
+                    attributes.itemClickListener?.invoke(holder.mediaContentView)
+                }
+            } else {
+                attributes.itemClickListener?.invoke(holder.mediaContentView)
+            }
         }
 
-// Single declaration — duplicates removed
+        // Card stroke color
         val isMine = attributes.informationData.sentByMe
         val backgroundAttr = if (isMine) {
             im.vector.lib.ui.styles.R.attr.vctr_message_bubble_outbound
@@ -144,13 +143,7 @@ abstract class MessageImageVideoItem : AbsMessageItem<MessageImageVideoItem.Hold
             im.vector.lib.ui.styles.R.attr.vctr_message_bubble_inbound
         }
         val backgroundColor = ThemeUtils.getColor(holder.view.context, backgroundAttr)
-
-// Single stroke block — bare strokeColor line at bottom removed
-        with(holder.imageCard) {
-            strokeColor = backgroundColor
-
-        }
-
+        holder.imageCard.strokeColor = backgroundColor
     }
 
     override fun unbind(holder: Holder) {

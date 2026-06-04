@@ -69,7 +69,7 @@ class AttachmentOverlayView @JvmOverloads constructor(
     override fun onEvent(event: AttachmentEvents) {
         when (event) {
             is AttachmentEvents.VideoEvent -> {
-                views.overlayPlayPauseButton.setImageResource(if (!event.isPlaying) R.drawable.ic_play_arrow else R.drawable.ic_pause)
+              //  views.overlayPlayPauseButton.setImageResource(if (!event.isPlaying) R.drawable.ic_play_arrow else R.drawable.ic_pause)
                 if (!suspendSeekBarUpdate) {
                     val safeDuration = (if (event.duration == 0) 100 else event.duration).toFloat()
                     val percent = ((event.progress / safeDuration) * 100f).toInt().coerceAtMost(100)

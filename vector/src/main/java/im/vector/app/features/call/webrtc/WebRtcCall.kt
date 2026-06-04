@@ -709,6 +709,28 @@ class WebRtcCall(
      *     from its active call list — this propagates to the remote user's device
      *     via the signaling layer (FIX #2).
      */
+//    private suspend fun terminate(reason: EndCallReason? = null, rejected: Boolean = false) =
+//            withContext(dispatcher) {
+//                runCatching { localVideoTrack?.setEnabled(false) }
+//                cameraAvailabilityCallback?.let {
+//                    context.getSystemService<CameraManager>()?.unregisterAvailabilityCallback(it)
+//                }
+//                inviteTimeout?.cancel()
+//                inviteTimeout = null
+//                // Set Ended state first — triggers immediate UI update (FIX #2).
+//                mxCall.state = CallState.Ended(reason ?: EndCallReason.USER_HANGUP)
+//                withContext(Dispatchers.Main) {
+//                    CallAndroidService.onCallTerminated(  // ← FIRST call
+//                            context = context,
+//                            callId = callId,
+//                            endCallReason = reason ?: EndCallReason.USER_HANGUP,
+//                            rejected = rejected
+//                    )
+//                }
+//                release()
+//                onCallEnded(callId, reason ?: EndCallReason.USER_HANGUP, rejected)
+//            }
+
     private suspend fun terminate(reason: EndCallReason? = null, rejected: Boolean = false) =
             withContext(dispatcher) {
                 runCatching { localVideoTrack?.setEnabled(false) }
@@ -717,20 +739,11 @@ class WebRtcCall(
                 }
                 inviteTimeout?.cancel()
                 inviteTimeout = null
-                // Set Ended state first — triggers immediate UI update (FIX #2).
+                // Set Ended state — triggers immediate UI update
                 mxCall.state = CallState.Ended(reason ?: EndCallReason.USER_HANGUP)
-//                withContext(Dispatchers.Main) {
-//                    CallAndroidService.onCallTerminated(context, callId, reason ?: EndCallReason.USER_HANGUP, rejected)
-//                }
-                withContext(Dispatchers.Main) {
-                    CallAndroidService.onCallTerminated(
-                            context = context,
-                            callId = callId,
-                            endCallReason = reason ?: EndCallReason.USER_HANGUP,
-                            rejected = rejected
-                    )
-                }
                 release()
+                // onCallEnded → WebRtcCallManager.onCallEnded → CallAndroidService.onCallTerminated
+                // Do NOT call CallAndroidService.onCallTerminated here — WebRtcCallManager handles it
                 onCallEnded(callId, reason ?: EndCallReason.USER_HANGUP, rejected)
             }
 
@@ -971,13 +984,16 @@ class WebRtcCall(
      * when User1 hangs up, with no polling or delay.
      */
     fun onCallHangupReceived(callHangupContent: CallHangupContent) {
-        sessionScope?.launch(dispatcher) {
+        // sessionScope is null when app is backgrounded — use fallback so terminate always runs
+        val scope = sessionScope ?: CoroutineScope(dispatcher)
+        scope.launch(dispatcher) {
             terminate(callHangupContent.reason)
         }
     }
 
     fun onCallRejectReceived(callRejectContent: CallRejectContent) {
-        sessionScope?.launch(dispatcher) {
+        val scope = sessionScope ?: CoroutineScope(dispatcher)
+        scope.launch(dispatcher) {
             terminate(callRejectContent.reason, true)
         }
     }

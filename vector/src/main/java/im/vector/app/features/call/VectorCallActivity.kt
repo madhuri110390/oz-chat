@@ -73,6 +73,7 @@ import im.vector.app.features.displayname.getBestName
 import im.vector.app.features.home.AvatarRenderer
 import im.vector.app.features.home.room.detail.RoomDetailActivity
 import im.vector.app.features.home.room.detail.arguments.TimelineArgs
+import im.vector.app.features.notifications.CallForegroundService
 import im.vector.app.features.notifications.NotificationDrawerManager
 import im.vector.lib.core.utils.compat.getParcelableExtraCompat
 import im.vector.lib.strings.CommonStrings
@@ -165,6 +166,9 @@ class VectorCallActivity :
         @Suppress("DEPRECATION")
         window.navigationBarColor = Color.BLACK
         window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
+        callViewModel.onEach(VectorCallViewState::callInfo) {
+            withState(callViewModel) { renderState(it) }
+        }
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true)
             setTurnScreenOn(true)
@@ -177,21 +181,13 @@ class VectorCallActivity :
             )
         }
         // Existing async observer - keep this
-        callViewModel.onAsync(VectorCallViewState::callState) {
-            if (it is CallState.Ended) {
-                handleCallEnded(it)
-            }
-        }
-
-// ADD THIS — direct state observer as safety net
-// onAsync can miss transitions; this catches any render pass where state is Ended
+        // ONLY this one — remove the other two completely
         callViewModel.onEach(VectorCallViewState::callState) { callStateAsync ->
             val callState = callStateAsync.invoke() ?: return@onEach
             if (callState is CallState.Ended && !isFinishing && !isDestroyed) {
                 handleCallEnded(callState)
             }
         }
-
 
         enableImmersiveMode()
         addOnPictureInPictureModeChangedListener(pictureInPictureModeChangedInfoConsumer)
@@ -207,13 +203,13 @@ class VectorCallActivity :
         setupToolbar(views.callToolbar)
         configureCallViews()
 
-        callViewModel.onEach { renderState(it) }
+        // In onCreate — ONLY ONE observer, no duplicate:
 
-        callViewModel.onAsync(VectorCallViewState::callState) {
-            if (it is CallState.Ended) {
-                handleCallEnded(it)
-            }
-        }
+
+        // handleCallEnded — just finish, WebRtcCallManager already told the service
+
+
+
 
         callViewModel.observeViewEvents { handleViewEvents(it) }
 
@@ -753,19 +749,19 @@ class VectorCallActivity :
     private fun handleCallEnded(callState: CallState.Ended) {
         if (callEndHandled) return
         callEndHandled = true
-
         notificationDrawerManager.clearAllEvents()
-
+        // Cancel notifications from activity side too
+        androidx.core.app.NotificationManagerCompat.from(applicationContext).cancelAll()
+        CallForegroundService.stop(applicationContext)
+        val callId = withState(callViewModel) { it.callId }
         CallAndroidService.onCallTerminated(
                 applicationContext,
-                withState(callViewModel) { it.callId },
+                callId,
                 callState.reason,
-                false
+                callState.reason == org.matrix.android.sdk.api.session.room.model.call.EndCallReason.USER_HANGUP
         )
-
         finishAndRemoveTask()
     }
-
     private fun showEndCallDialog(@StringRes title: Int, @StringRes description: Int) {
         if (isFinishing || isDestroyed) return
         MaterialAlertDialogBuilder(this)
@@ -781,31 +777,44 @@ class VectorCallActivity :
     // -------------------------------------------------------------------------
 
     private fun configureCallInfo(state: VectorCallViewState, blurAvatar: Boolean = false) {
-        state.callInfo?.opponentUserItem?.let {
-            val colorFilter = ContextCompat.getColor(this, im.vector.lib.ui.styles.R.color.bg_call_screen_blur)
-            avatarRenderer.renderBlur(it, views.bgCallView,
-                    sampling = 20, rounded = false, colorFilter = colorFilter, addPlaceholder = false)
+        val opponentItem = state.callInfo?.opponentUserItem
 
-            if (state.transferee is VectorCallViewState.TransfereeState.NoTransferee) {
-                views.participantNameText.setTextOrHide(null)
-                toolbar?.title = if (state.isVideoCall) {
-                    getString(CommonStrings.video_call_with_participant, it.getBestName())
-                } else {
-                    getString(CommonStrings.audio_call_with_participant, it.getBestName())
-                }
-            } else {
-                views.participantNameText.setTextOrHide(
-                        getString(CommonStrings.call_transfer_consulting_with, it.getBestName()))
-            }
-
-            if (blurAvatar) {
-                avatarRenderer.renderBlur(it, views.otherMemberAvatar,
-                        sampling = 2, rounded = true, colorFilter = colorFilter, addPlaceholder = true)
-            } else {
-                avatarRenderer.render(it, views.otherMemberAvatar)
+        // Always set toolbar title — use callId as fallback if name not loaded yet
+        if (state.transferee is VectorCallViewState.TransfereeState.NoTransferee) {
+            views.participantNameText.setTextOrHide(null)
+            toolbar?.title = when {
+                opponentItem != null && state.isVideoCall ->
+                    getString(CommonStrings.video_call_with_participant, opponentItem.getBestName())
+                opponentItem != null ->
+                    getString(CommonStrings.audio_call_with_participant, opponentItem.getBestName())
+                state.isVideoCall -> getString(CommonStrings.video_call_with_participant, "...")
+                else -> getString(CommonStrings.audio_call_with_participant, "...")
             }
         }
 
+        if (opponentItem != null) {
+            val colorFilter = ContextCompat.getColor(this, im.vector.lib.ui.styles.R.color.bg_call_screen_blur)
+            avatarRenderer.renderBlur(
+                    opponentItem, views.bgCallView,
+                    sampling = 20, rounded = false, colorFilter = colorFilter, addPlaceholder = false
+            )
+            if (state.transferee !is VectorCallViewState.TransfereeState.NoTransferee) {
+                views.participantNameText.setTextOrHide(
+                        getString(CommonStrings.call_transfer_consulting_with, opponentItem.getBestName())
+                )
+            }
+            if (blurAvatar) {
+                val colorFilter = ContextCompat.getColor(this, im.vector.lib.ui.styles.R.color.bg_call_screen_blur)
+                avatarRenderer.renderBlur(
+                        opponentItem, views.otherMemberAvatar,
+                        sampling = 2, rounded = true, colorFilter = colorFilter, addPlaceholder = true
+                )
+            } else {
+                avatarRenderer.render(opponentItem, views.otherMemberAvatar)
+            }
+        }
+
+        // Other known call layout
         if (state.otherKnownCallInfo?.opponentUserItem == null || isInPictureInPictureModeSafe()) {
             views.otherKnownCallLayout.isVisible = false
         } else {
@@ -814,10 +823,7 @@ class VectorCallActivity :
             avatarRenderer.renderBlur(
                     matrixItem = state.otherKnownCallInfo.opponentUserItem,
                     imageView = views.otherKnownCallAvatarView,
-                    sampling = 20,
-                    rounded = true,
-                    colorFilter = colorFilter,
-                    addPlaceholder = true
+                    sampling = 20, rounded = true, colorFilter = colorFilter, addPlaceholder = true
             )
             views.otherKnownCallLayout.isVisible = true
             views.otherSmallIsHeldIcon.isVisible =

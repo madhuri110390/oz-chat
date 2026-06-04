@@ -23,6 +23,7 @@ import im.vector.app.features.call.lookup.CallProtocolsChecker
 import im.vector.app.features.call.lookup.CallUserMapper
 import im.vector.app.features.call.utils.EglUtils
 import im.vector.app.features.call.vectorCallService
+import im.vector.app.features.notifications.CallForegroundService
 import im.vector.app.features.session.coroutineScope
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -57,12 +58,9 @@ import java.util.concurrent.atomic.AtomicReference
 import javax.inject.Inject
 import javax.inject.Singleton
 
-/**
- * Manage peerConnectionFactory & Peer connections outside of activity lifecycle to resist configuration changes.
- * Use app context
- */
 private val loggerTag = LoggerTag("WebRtcCallManager", LoggerTag.VOIP)
 private const val RING_DURATION_MS = 40_000L
+
 @Singleton
 class WebRtcCallManager @Inject constructor(
         private val context: Context,
@@ -133,6 +131,9 @@ class WebRtcCallManager @Inject constructor(
     private val executor = Executors.newSingleThreadExecutor()
     private val dispatcher = executor.asCoroutineDispatcher()
 
+    // Dedicated scope for ring timeouts — never null, survives session changes
+    private val ringTimeoutScope = CoroutineScope(dispatcher)
+
     private val rootEglBase by lazy { EglUtils.rootEglBase }
 
     private var isInBackground: Boolean = true
@@ -146,10 +147,6 @@ class WebRtcCallManager @Inject constructor(
         isInBackground = true
     }
 
-    /**
-     * The current call is the call we interacted with whatever his state (connected,resumed, held...)
-     * As soon as we interact with an other call, it replaces this one and put it on held if not already.
-     */
     var currentCall: AtomicReference<WebRtcCall?> = AtomicReference(null)
     private fun AtomicReference<WebRtcCall?>.setAndNotify(newValue: WebRtcCall?) {
         set(newValue)
@@ -161,10 +158,6 @@ class WebRtcCallManager @Inject constructor(
     private val advertisedCalls = HashSet<String>()
     private val callsByCallId = ConcurrentHashMap<String, WebRtcCall>()
     private val callsByRoomId = ConcurrentHashMap<String, MutableList<WebRtcCall>>()
-
-    // Calls started as an attended transfer, ie. with the intention of transferring another
-    // call with a different party to this one.
-    // callId (target) -> call (transferee)
     private val transferees = ConcurrentHashMap<String, WebRtcCall>()
 
     fun getCallById(callId: String): WebRtcCall? {
@@ -191,9 +184,6 @@ class WebRtcCallManager @Inject constructor(
         protocolsChecker?.checkProtocols()
     }
 
-    /**
-     * @return a set of all advertised call during the lifetime of the app.
-     */
     fun getAdvertisedCalls() = advertisedCalls
 
     fun headSetButtonTapped() {
@@ -203,7 +193,6 @@ class WebRtcCallManager @Inject constructor(
             call.acceptIncomingCall()
         }
         if (call.mxCall.state is CallState.Connected) {
-            // end call?
             call.endCall()
         }
     }
@@ -225,9 +214,7 @@ class WebRtcCallManager @Inject constructor(
         val options = PeerConnectionFactory.Options()
         val defaultVideoEncoderFactory = DefaultVideoEncoderFactory(
                 eglBaseContext,
-                /* enableIntelVp8Encoder */
                 true,
-                /* enableH264HighProfile */
                 true
         )
         val defaultVideoDecoderFactory = DefaultVideoDecoderFactory(eglBaseContext)
@@ -254,7 +241,17 @@ class WebRtcCallManager @Inject constructor(
             Timber.tag(loggerTag.value).v("On call ended for unknown call $callId")
         }
         webRtcCall.trackCallEnded()
-        CallAndroidService.onCallTerminated(context, callId, endCallReason, rejected)
+        CallAndroidService.onCallTerminated(
+                context,
+                callId,
+                endCallReason,
+                rejected,
+                webRtcCall.nativeRoomId,
+                webRtcCall.mxCall.opponentUserId,
+                webRtcCall.mxCall.isVideoCall,
+                webRtcCall.mxCall.isOutgoing
+        )
+        CallForegroundService.stop(context)  // ← add this line only
         callsByRoomId[webRtcCall.signalingRoomId]?.remove(webRtcCall)
         callsByRoomId[webRtcCall.nativeRoomId]?.remove(webRtcCall)
         transferees.remove(callId)
@@ -265,27 +262,27 @@ class WebRtcCallManager @Inject constructor(
         tryOrNull {
             currentCallsListeners.forEach { it.onCallEnded(callId) }
         }
-        // There is no active calls
         if (getCurrentCall() == null) {
             Timber.tag(loggerTag.value).v("Dispose peerConnectionFactory as there is no need to keep one")
             peerConnectionFactory?.dispose()
             peerConnectionFactory = null
             audioManager.setMode(CallAudioManager.Mode.DEFAULT)
-            // did we start background sync? so we should stop it
             if (syncStartedWhenInBackground) {
                 if (!unifiedPushHelper.isBackgroundSync()) {
                     Timber.tag(loggerTag.value).v("Sync started when in background, stop it")
                     currentSession?.syncService()?.stopAnyBackgroundSync()
-                } else {
-                    // for fdroid we should not stop, it should continue syncing
-                    // maybe we should restore default timeout/delay though?
                 }
                 syncStartedWhenInBackground = false
             }
         }
     }
 
-    suspend fun startOutgoingCall(nativeRoomId: String, otherUserId: String, isVideoCall: Boolean, transferee: WebRtcCall? = null) {
+    suspend fun startOutgoingCall(
+            nativeRoomId: String,
+            otherUserId: String,
+            isVideoCall: Boolean,
+            transferee: WebRtcCall? = null
+    ) {
         val signalingRoomId = callUserMapper?.getOrCreateVirtualRoomForRoom(nativeRoomId, otherUserId) ?: nativeRoomId
         if (otherUserId == currentSession?.myUserId) return
         Timber.tag(loggerTag.value).v("startOutgoingCall in room $signalingRoomId to $otherUserId isVideo $isVideoCall")
@@ -295,7 +292,6 @@ class WebRtcCallManager @Inject constructor(
         }
         if (getCurrentCall() != null && getCurrentCall()?.mxCall?.state !is CallState.Connected || getCalls().size >= 2) {
             Timber.tag(loggerTag.value).w("cannot start outgoing call")
-            // Just ignore, maybe we could answer from other session?
             return
         }
         executor.execute {
@@ -312,13 +308,14 @@ class WebRtcCallManager @Inject constructor(
                 context = context.applicationContext,
                 callId = mxCall.callId
         )
-
-        // start the activity now
         context.startActivity(VectorCallActivity.newIntent(context, webRtcCall, VectorCallActivity.OUTGOING_CREATED))
-        sessionScope?.launch {
+
+        // Use dedicated ring timeout scope — never null unlike sessionScope
+        ringTimeoutScope.launch {
             delay(RING_DURATION_MS)
             val call = callsByCallId[mxCall.callId] ?: return@launch
             if (call.mxCall.state is CallState.Dialing || call.mxCall.state is CallState.LocalRinging) {
+                Timber.tag(loggerTag.value).v("Outgoing ring timeout — auto-ending call ${mxCall.callId}")
                 call.endCall(EndCallReason.USER_HANGUP)
             }
         }
@@ -350,10 +347,8 @@ class WebRtcCallManager @Inject constructor(
         )
         advertisedCalls.add(mxCall.callId)
         callsByCallId[mxCall.callId] = webRtcCall
-        callsByRoomId.getOrPut(nativeRoomId) { ArrayList(1) }
-                .add(webRtcCall)
-        callsByRoomId.getOrPut(mxCall.roomId) { ArrayList(1) }
-                .add(webRtcCall)
+        callsByRoomId.getOrPut(nativeRoomId) { ArrayList(1) }.add(webRtcCall)
+        callsByRoomId.getOrPut(mxCall.roomId) { ArrayList(1) }.add(webRtcCall)
         if (getCurrentCall() == null) {
             currentCall.setAndNotify(webRtcCall)
         }
@@ -373,38 +368,32 @@ class WebRtcCallManager @Inject constructor(
         }
         if ((getCurrentCall() != null && getCurrentCall()?.mxCall?.state !is CallState.Connected) || getCalls().size >= 2) {
             Timber.tag(loggerTag.value).w("receiving incoming call but cannot handle it")
-            // Just ignore, maybe we could answer from other session?
             return
         }
         createWebRtcCall(mxCall, nativeRoomId).apply {
             offerSdp = callInviteContent.offer
         }
-        // Start background service with notification
         CallAndroidService.onIncomingCallRinging(
                 context = context,
                 callId = mxCall.callId,
                 isInBackground = isInBackground
         )
-        // If this is received while in background, the app will not sync,
-        // and thus won't be able to received events. For example if the call is
-        // accepted on an other session this device will continue ringing
         if (isInBackground) {
             if (!unifiedPushHelper.isBackgroundSync()) {
-                // only for push version as fdroid version is already doing it?
                 syncStartedWhenInBackground = true
                 currentSession?.syncService()?.startAutomaticBackgroundSync(30, 0)
-            } else {
-                // Maybe increase sync freq? but how to set back to default values?
-            }
-        }
-        sessionScope?.launch {
-            delay(RING_DURATION_MS)
-            val call = callsByCallId[mxCall.callId] ?: return@launch
-            if (call.mxCall.state is CallState.LocalRinging) {
-                call.endCall(EndCallReason.USER_HANGUP)
             }
         }
 
+        // Use dedicated ring timeout scope — never null unlike sessionScope
+        ringTimeoutScope.launch {
+            delay(RING_DURATION_MS)
+            val call = callsByCallId[mxCall.callId] ?: return@launch
+            if (call.mxCall.state is CallState.LocalRinging) {
+                Timber.tag(loggerTag.value).v("Incoming ring timeout — auto-ending call ${mxCall.callId}")
+                call.endCall(EndCallReason.USER_HANGUP)
+            }
+        }
     }
 
     override fun onCallAnswerReceived(callAnswerContent: CallAnswerContent) {
@@ -413,7 +402,6 @@ class WebRtcCallManager @Inject constructor(
                     Timber.tag(loggerTag.value).w("onCallAnswerReceived for non active call? ${callAnswerContent.callId}")
                 }
         val mxCall = call.mxCall
-        // Update service state
         CallAndroidService.onPendingCall(
                 context = context,
                 callId = mxCall.callId
@@ -422,19 +410,54 @@ class WebRtcCallManager @Inject constructor(
     }
 
     override fun onCallHangupReceived(callHangupContent: CallHangupContent) {
+        Timber.tag(loggerTag.value).v("onCallHangupReceived for call ${callHangupContent.callId}")
         val call = callsByCallId[callHangupContent.callId]
                 ?: return Unit.also {
                     Timber.tag(loggerTag.value).w("onCallHangupReceived for non active call? ${callHangupContent.callId}")
                 }
+        // Delegate to WebRtcCall for proper internal state transition
         call.onCallHangupReceived(callHangupContent)
+        // Safety net: if WebRtcCall didn't trigger onCallEnded within 500ms
+        // (happens when hangup arrives during LocalRinging state),
+        // force terminate at manager level.
+        ringTimeoutScope.launch {
+            delay(500)
+            if (callsByCallId.containsKey(callHangupContent.callId)) {
+                Timber.tag(loggerTag.value).w(
+                        "Force terminating call ${callHangupContent.callId} — " +
+                                "WebRtcCall did not self-terminate after hangup"
+                )
+                onCallEnded(
+                        callHangupContent.callId,
+                        callHangupContent.reason ?: EndCallReason.USER_HANGUP,
+                        rejected = false
+                )
+            }
+        }
     }
 
     override fun onCallRejectReceived(callRejectContent: CallRejectContent) {
+        Timber.tag(loggerTag.value).v("onCallRejectReceived for call ${callRejectContent.callId}")
         val call = callsByCallId[callRejectContent.callId]
                 ?: return Unit.also {
                     Timber.tag(loggerTag.value).w("onCallRejectReceived for non active call? ${callRejectContent.callId}")
                 }
         call.onCallRejectReceived(callRejectContent)
+        // Safety net: force terminate if WebRtcCall didn't self-terminate
+        ringTimeoutScope.launch {
+            delay(500)
+            if (callsByCallId.containsKey(callRejectContent.callId)) {
+                Timber.tag(loggerTag.value).w(
+                        "Force terminating call ${callRejectContent.callId} — " +
+                                "WebRtcCall did not self-terminate after reject"
+                )
+                onCallEnded(
+                        callRejectContent.callId,
+                        EndCallReason.USER_HANGUP,
+                        rejected = true
+                )
+            }
+        }
     }
 
     override fun onCallSelectAnswerReceived(callSelectAnswerContent: CallSelectAnswerContent) {
@@ -471,11 +494,9 @@ class WebRtcCallManager @Inject constructor(
                 call.switchToVideoAsInitiator()
             }
             UpdateCallType.VIDEO_REQUEST -> {
-                // Forward to specialized handler
                 onVideoRequestReceived(mxCall)
             }
             UpdateCallType.VIDEO_ACCEPT -> {
-                // Forward to specialized handler
                 onVideoRequestAccepted(mxCall)
             }
             UpdateCallType.SCREEN_SHARE -> {
@@ -483,19 +504,15 @@ class WebRtcCallManager @Inject constructor(
             }
         }
 
-        // Notify ViewModel listeners for generic updates
         currentCallsListeners.forEach {
             tryOrNull { it.onCallUpdateTypeReceived(mxCall, update) }
         }
     }
 
-
     override fun onVideoRequestReceived(mxCall: MxCall) {
         Timber.tag(loggerTag.value).v("onVideoRequestReceived for call ${mxCall.callId}")
-        // Remote is asking us to switch to video → mark pending
         val call = callsByCallId[mxCall.callId] ?: return
         call.onVideoRequestReceived()
-        // Notify UI listeners → so they can show a prompt
         currentCallsListeners.forEach {
             tryOrNull { it.onVideoRequestReceived(mxCall) }
         }
@@ -504,13 +521,7 @@ class WebRtcCallManager @Inject constructor(
     override fun onVideoRequestAccepted(mxCall: MxCall) {
         Timber.tag(loggerTag.value).v("onVideoRequestAccepted for call ${mxCall.callId}")
         val call = callsByCallId[mxCall.callId] ?: return
-        
         Timber.tag(loggerTag.value).v("Found call: ${call.callId}, isOutgoing: ${call.mxCall.isOutgoing}")
-        
-        // Do NOT switch to video here - the accepting peer already handled it
-         //call.switchToVideo(sendUpdate = false)
-        
-        // Notify UI so it can auto-transition layouts
         currentCallsListeners.forEach {
             tryOrNull { it.onVideoRequestAccepted(mxCall) }
         }
@@ -536,9 +547,6 @@ class WebRtcCallManager @Inject constructor(
         call.onCallAssertedIdentityReceived(callAssertedIdentityContent)
     }
 
-    /**
-     * Analytics.
-     */
     private fun WebRtcCall.trackCallStarted() {
         analyticsTracker.capture(
                 CallStarted(
@@ -559,5 +567,4 @@ class WebRtcCallManager @Inject constructor(
                 )
         )
     }
-
 }
