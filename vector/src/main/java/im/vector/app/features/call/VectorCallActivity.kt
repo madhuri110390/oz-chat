@@ -769,19 +769,18 @@ class VectorCallActivity :
         val formattedDuration = withState(callViewModel) { it.formattedDuration }
         val callNotAnswered = formattedDuration.isEmpty() || formattedDuration == "00:00"
 
-        if (isOutgoing && callNotAnswered) {
-            when (callState.reason) {
-                EndCallReason.USER_HANGUP -> {
-                    // Receiver explicitly rejected
-                    Toast.makeText(this, "Call rejected", Toast.LENGTH_SHORT).show()
-                }
-                EndCallReason.INVITE_TIMEOUT -> {
-                    // No answer within ring timeout
-                    Toast.makeText(this, "No answer", Toast.LENGTH_SHORT).show()
-                }
-                else -> Unit
+
+            if (isOutgoing && callNotAnswered) {
+                Toast.makeText(
+                        this,
+                        if (callState.reason == EndCallReason.INVITE_TIMEOUT)
+                            "Call not answered"
+                        else
+                            "Call rejected",
+                        Toast.LENGTH_SHORT
+                ).show()
             }
-        }
+
 
         finishAndRemoveTask()
     }

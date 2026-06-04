@@ -116,16 +116,12 @@ object ImageBrandingUtils {
     }
 
     fun getShareCaption(username: String, permalink: String? = null): String {
-        val link = getDynamicInviteLink(username, permalink)
         return """
-            Sent via OZ Chat
+        Sent via OZ Chat
 
-            Download OZ Chat:
-            https://play.google.com/store/apps/details?id=com.openzipper.ozchat
-            
-            View Content:
-            $link
-        """.trimIndent()
+        Download OZ Chat:
+        https://play.google.com/store/apps/details?id=com.openzipper.ozchat
+    """.trimIndent()
     }
 
     private fun getLogoBitmap(context: Context, size: Int): Bitmap? {

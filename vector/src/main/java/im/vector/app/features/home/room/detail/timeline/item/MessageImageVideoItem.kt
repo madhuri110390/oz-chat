@@ -55,7 +55,8 @@ abstract class MessageImageVideoItem : AbsMessageItem<MessageImageVideoItem.Hold
 
     @EpoxyAttribute
     lateinit var contentUploadStateTrackerBinder: ContentUploadStateTrackerBinder
-
+    private var hideControlsRunnable: Runnable? = null
+    var isPlaying: Boolean = false
     override fun bind(holder: Holder) {
         super.bind(holder)
         holder.imageView.visibility = View.VISIBLE
@@ -88,6 +89,7 @@ abstract class MessageImageVideoItem : AbsMessageItem<MessageImageVideoItem.Hold
 
         // Initial play button visibility
         holder.playContentView.visibility = when {
+            isPlaying -> View.GONE                                       // already playing, survive rotation
             playable && isImageMessage && autoplayAnimatedImages -> View.GONE
             playable -> View.VISIBLE
             else -> View.GONE
@@ -102,6 +104,7 @@ abstract class MessageImageVideoItem : AbsMessageItem<MessageImageVideoItem.Hold
                 tapJob = null
             } else {
                 tapJob = Runnable {
+                    isPlaying = true
                     holder.playContentView.visibility = View.GONE
                     clickListener?.invoke(holder.imageView)
                 }.also { job ->
@@ -115,26 +118,62 @@ abstract class MessageImageVideoItem : AbsMessageItem<MessageImageVideoItem.Hold
         // SINGLE mediaContentView listener — YouTube style:
         // If play button visible (not yet playing) → open video
         // If play button gone (video playing) → toggle controls briefly
+
+//        holder.mediaContentView.setOnClickListener {
+//            if (playable) {
+//                val isPlaying = holder.playContentView.visibility == View.GONE
+//
+//                if (isPlaying) {
+//                    // Controls currently hidden → show them
+//                    hideControlsRunnable?.let { holder.playContentView.removeCallbacks(it) }
+//
+//                    holder.playContentView.visibility = View.VISIBLE
+//
+//                    // Schedule auto-hide after 3s
+//                    hideControlsRunnable = Runnable {
+//                        holder.playContentView.visibility = View.GONE
+//                    }.also { runnable ->
+//                        holder.playContentView.postDelayed(runnable, 3000L)
+//                    }
+//                } else {
+//                    // Controls are visible → hide immediately (YouTube-style toggle)
+//                    hideControlsRunnable?.let { holder.playContentView.removeCallbacks(it) }
+//                    hideControlsRunnable = null
+//                    holder.playContentView.visibility = View.GONE
+//
+//                    // Only open viewer if video hasn't started yet (first tap)
+//                    // If you want tap-to-dismiss only (not open), remove the line below
+//                    attributes.itemClickListener?.invoke(holder.mediaContentView)
+//                }
+//            } else {
+//                attributes.itemClickListener?.invoke(holder.mediaContentView)
+//            }
+//        }
         holder.mediaContentView.setOnClickListener {
             if (playable) {
                 val isPlaying = holder.playContentView.visibility == View.GONE
+
                 if (isPlaying) {
-                    // Video is playing — show controls briefly then hide
-                    holder.playContentView.removeCallbacks(null)
+                    // Video playing, controls hidden → show them
+                    hideControlsRunnable?.let { holder.playContentView.removeCallbacks(it) }
                     holder.playContentView.visibility = View.VISIBLE
-                    holder.playContentView.postDelayed({
+
+                    hideControlsRunnable = Runnable {
                         holder.playContentView.visibility = View.GONE
-                    }, 3000L)
+                    }.also { runnable ->
+                        holder.playContentView.postDelayed(runnable, 3000L)
+                    }
                 } else {
-                    // Video not started yet — open video viewer
+                    // Controls visible → hide immediately, do NOT open viewer
+                    hideControlsRunnable?.let { holder.playContentView.removeCallbacks(it) }
+                    hideControlsRunnable = null
                     holder.playContentView.visibility = View.GONE
-                    attributes.itemClickListener?.invoke(holder.mediaContentView)
+                    // ← removed itemClickListener call here
                 }
             } else {
                 attributes.itemClickListener?.invoke(holder.mediaContentView)
             }
         }
-
         // Card stroke color
         val isMine = attributes.informationData.sentByMe
         val backgroundAttr = if (isMine) {
@@ -148,7 +187,10 @@ abstract class MessageImageVideoItem : AbsMessageItem<MessageImageVideoItem.Hold
 
     override fun unbind(holder: Holder) {
         Glide.with(holder.view.context.applicationContext).clear(holder.imageView)
+        hideControlsRunnable?.let { holder.playContentView.removeCallbacks(it) }
+        hideControlsRunnable = null
         imageContentRenderer.clear(holder.imageView)
+        isPlaying = false
         holder.imageView.visibility = View.VISIBLE
         holder.playContentView.visibility = View.GONE
         contentUploadStateTrackerBinder.unbind(attributes.informationData.eventId)

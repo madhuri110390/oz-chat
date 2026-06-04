@@ -26,11 +26,22 @@ class AttachmentOverlayView @JvmOverloads constructor(
 
     private var isPlaying = false
     private var suspendSeekBarUpdate = false
+    private var hideControlsRunnable: Runnable? = null
+
+    // Views that should auto-hide (top bar + bottom bar)
+    private val controlViews get() = listOf(
+            views.overlayBackButton,
+            views.overlayShareButton,
+            views.overlayDownloadButton,
+            views.overlayPlayPauseButton,
+            views.overlaySeekBar
+    )
 
     init {
         inflate(context, R.layout.merge_image_attachment_overlay, this)
         views = MergeImageAttachmentOverlayBinding.bind(this)
         setBackgroundColor(Color.TRANSPARENT)
+
         views.overlayBackButton.setOnClickListener {
             interactionListener?.onDismiss()
         }
@@ -42,6 +53,7 @@ class AttachmentOverlayView @JvmOverloads constructor(
         }
         views.overlayPlayPauseButton.setOnClickListener {
             interactionListener?.onPlayPause(!isPlaying)
+            scheduleHideControls() // restart hide timer on play/pause tap
         }
 
         views.overlaySeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
@@ -50,15 +62,49 @@ class AttachmentOverlayView @JvmOverloads constructor(
                     interactionListener?.videoSeekTo(progress)
                 }
             }
-
             override fun onStartTrackingTouch(seekBar: SeekBar?) {
                 suspendSeekBarUpdate = true
+                cancelHideControls() // don't hide while seeking
             }
-
             override fun onStopTrackingTouch(seekBar: SeekBar?) {
                 suspendSeekBarUpdate = false
+                scheduleHideControls() // restart after seek
             }
         })
+
+        // Tap anywhere on overlay → toggle controls
+        setOnClickListener {
+            if (isPlaying) {
+                val controlsVisible = views.overlayBackButton.alpha > 0f
+                if (controlsVisible) {
+                    hideControlsNow()
+                } else {
+                    showControls()
+                    scheduleHideControls()
+                }
+            }
+        }
+    }
+
+    private fun showControls() {
+        controlViews.forEach { it.animate().alpha(1f).setDuration(200).start() }
+    }
+
+    private fun hideControlsNow() {
+        cancelHideControls()
+        controlViews.forEach { it.animate().alpha(0f).setDuration(200).start() }
+    }
+
+    private fun scheduleHideControls() {
+        cancelHideControls()
+        hideControlsRunnable = Runnable { hideControlsNow() }.also {
+            postDelayed(it, 3000L)
+        }
+    }
+
+    private fun cancelHideControls() {
+        hideControlsRunnable?.let { removeCallbacks(it) }
+        hideControlsRunnable = null
     }
 
     fun updateWith(counter: String, senderInfo: String) {
@@ -69,12 +115,22 @@ class AttachmentOverlayView @JvmOverloads constructor(
     override fun onEvent(event: AttachmentEvents) {
         when (event) {
             is AttachmentEvents.VideoEvent -> {
-              //  views.overlayPlayPauseButton.setImageResource(if (!event.isPlaying) R.drawable.ic_play_arrow else R.drawable.ic_pause)
                 if (!suspendSeekBarUpdate) {
                     val safeDuration = (if (event.duration == 0) 100 else event.duration).toFloat()
                     val percent = ((event.progress / safeDuration) * 100f).toInt().coerceAtMost(100)
+                    val wasPlaying = isPlaying
                     isPlaying = event.isPlaying
                     views.overlaySeekBar.progress = percent
+
+                    // Video just started playing → start auto-hide
+                    if (!wasPlaying && isPlaying) {
+                        scheduleHideControls()
+                    }
+                    // Video paused → show controls, cancel auto-hide
+                    if (wasPlaying && !isPlaying) {
+                        cancelHideControls()
+                        showControls()
+                    }
                 }
             }
         }

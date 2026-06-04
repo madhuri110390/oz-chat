@@ -191,62 +191,61 @@ class VectorFirebaseMessagingService : FirebaseMessagingService() {
             return
         }
 
+        // ✅ FIX 1: Skip entirely for non-call pushes — real notification comes from vectorPushHandler
+        if (!isCall) {
+            Timber.tag(loggerTag.value).d("Skipping generic notification for message push — handled by sync")
+            return
+        }
+
         try {
             notificationUtils.createNotificationChannels()
             val data = message.data
 
-            // Prioritise sender_display_name so caller name shows instead of "Incoming Call"
             val title = message.notification?.title
                     ?: data["sender_display_name"]
                     ?: data["title"]
                     ?: data["subject"]
                     ?: data["room_name"]
-                    ?: if (isCall) "Incoming Call" else "New Message"
+                    ?: "Incoming Call"  // ✅ FIX 2: No "New Message" fallback needed anymore
 
             val body = message.notification?.body
                     ?: data["body"]
                     ?: data["message"]
-                    ?: if (isCall) null else data["content"]
-                            ?: if (isCall) null else "New message received"
+                    ?: null  // ✅ FIX 3: Removed "New message received" fallback completely
 
             val isNoisy = data["noisy"]?.toBooleanStrictOrNull()
                     ?: FcmPushPayloadHelper.isHighPriorityPush(data)
                     ?: true
 
-            val notificationId = if (isCall) {
-                NotificationUtils.CALL_NOTIFICATION_ID
-            } else {
-                NotificationUtils.ROOM_MESSAGES_NOTIFICATION_ID
+            // ✅ FIX 4: Always CALL_NOTIFICATION_ID here since we return early for messages above
+            val notificationId = NotificationUtils.CALL_NOTIFICATION_ID
+
+            Timber.tag(loggerTag.value).d("incoming call invite received callId=$callId roomId=${data["room_id"]}")
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                val granted = ContextCompat.checkSelfPermission(
+                        this, android.Manifest.permission.POST_NOTIFICATIONS
+                ) == android.content.pm.PackageManager.PERMISSION_GRANTED
+                Timber.tag(loggerTag.value).d("POST_NOTIFICATIONS granted=$granted")
             }
 
-            if (isCall) {
-                Timber.tag(loggerTag.value).d("incoming call invite received callId=$callId roomId=${data["room_id"]}")
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                    val granted = ContextCompat.checkSelfPermission(
-                            this, android.Manifest.permission.POST_NOTIFICATIONS
-                    ) == android.content.pm.PackageManager.PERMISSION_GRANTED
-                    Timber.tag(loggerTag.value).d("POST_NOTIFICATIONS granted=$granted")
-                }
-                if (Build.VERSION.SDK_INT >= 34) {
-                    val nm = getSystemService(NOTIFICATION_SERVICE) as? android.app.NotificationManager
-                    Timber.tag(loggerTag.value).d("canUseFullScreenIntent=${nm?.canUseFullScreenIntent()}")
-                }
-            } else {
-                Timber.tag(loggerTag.value).d("incoming message push roomId=${data["room_id"]}")
+            if (Build.VERSION.SDK_INT >= 34) {
+                val nm = getSystemService(NOTIFICATION_SERVICE) as? android.app.NotificationManager
+                Timber.tag(loggerTag.value).d("canUseFullScreenIntent=${nm?.canUseFullScreenIntent()}")
             }
-            if (isCall) {
-                // Cancel any stale message notifications before showing call notification
-                notificationUtils.cancelNotificationMessage(
-                        null, NotificationUtils.ROOM_MESSAGES_NOTIFICATION_ID
-                )
-            }
+
+            // Cancel any stale message notifications before showing call notification
+            notificationUtils.cancelNotificationMessage(
+                    null, NotificationUtils.ROOM_MESSAGES_NOTIFICATION_ID
+            )
+
             notificationUtils.showNotificationMessage(
                     tag = overrideTag,
                     id = notificationId,
                     notification = notificationUtils.buildGenericPushNotification(
                             title = title,
                             body = body,
-                            isCall = isCall,
+                            isCall = true,  // ✅ always true now
                             roomId = data["room_id"],
                             threadId = data["thread_id"],
                             noisy = isNoisy,
@@ -254,9 +253,8 @@ class VectorFirebaseMessagingService : FirebaseMessagingService() {
                     ).build(),
             )
 
-            if (isCall) {
-                Timber.tag(loggerTag.value).d("lock screen call notification shown")
-            }
+            Timber.tag(loggerTag.value).d("lock screen call notification shown")
+
         } catch (e: Exception) {
             Timber.tag(loggerTag.value).e(e, "Failed to show FCM notification")
         }

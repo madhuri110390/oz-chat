@@ -242,6 +242,10 @@ class WebRtcCallManager @Inject constructor(
         // Don't show if rejected by receiver or answered elsewhere
         if (rejected || endCallReason == EndCallReason.ANSWERED_ELSEWHERE) return
 
+        // Caller side — toast shown in VectorCallActivity, no notification needed
+        if (isOutgoing) return
+
+        // Receiver side only — show missed call notification
         val callInfo = im.vector.app.core.services.CallAndroidService.CallInformation(
                 callId = callId,
                 nativeRoomId = nativeRoomId,
@@ -252,18 +256,11 @@ class WebRtcCallManager @Inject constructor(
         )
 
         val nm = androidx.core.app.NotificationManagerCompat.from(context)
-        val notification = if (isOutgoing) {
-            // Caller — receiver didn't answer
-            Timber.tag(loggerTag.value).v("Posting call not answered notification")
-            notificationUtils.buildCallNotAnsweredNotification(callInfo)
-        } else {
-            // Receiver — missed incoming call
-            Timber.tag(loggerTag.value).v("Posting missed call notification")
-            notificationUtils.buildCallMissedNotification(callInfo)
-        }
+        Timber.tag(loggerTag.value).v("Posting missed call notification for $callId")
 
         try {
-            nm.notify("MISSED_CALL_TAG", nativeRoomId.hashCode(), notification)
+            nm.notify("MISSED_CALL_TAG", nativeRoomId.hashCode(),
+                    notificationUtils.buildCallMissedNotification(callInfo))
         } catch (e: Exception) {
             Timber.tag(loggerTag.value).e(e, "Failed to post missed call notification")
         }
@@ -380,8 +377,7 @@ class WebRtcCallManager @Inject constructor(
             delay(RING_DURATION_MS)
             val call = callsByCallId[mxCall.callId] ?: return@launch
             if (call.mxCall.state is CallState.Dialing || call.mxCall.state is CallState.LocalRinging) {
-                Timber.tag(loggerTag.value).v("Outgoing ring timeout — auto-ending call ${mxCall.callId}")
-                call.endCall(EndCallReason.USER_HANGUP)
+                call.endCall(EndCallReason.INVITE_TIMEOUT)  // ← use INVITE_TIMEOUT for no answer
             }
         }
     }
