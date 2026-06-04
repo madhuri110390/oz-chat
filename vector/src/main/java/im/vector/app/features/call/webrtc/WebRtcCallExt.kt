@@ -13,8 +13,8 @@ import org.matrix.android.sdk.api.session.getRoom
 import org.matrix.android.sdk.api.util.MatrixItem
 import org.matrix.android.sdk.api.util.toMatrixItem
 
-fun WebRtcCall.getOpponentAsMatrixItem(session: Session): MatrixItem? {
-    return session.getRoom(nativeRoomId)?.let { room ->
+fun WebRtcCall.getOpponentAsMatrixItem(session: Session?): MatrixItem? {
+    return session?.getRoom(nativeRoomId)?.let { room ->
         val roomSummary = room.roomSummary() ?: return@let null
         // Fallback to RoomSummary if there is no other member.
         if (roomSummary.otherMemberIds.isEmpty().orFalse()) {

@@ -211,6 +211,9 @@ class VectorCallActivity :
 
 
 
+        // Main state renderer — MISSING in your current code, add this
+        callViewModel.onEach { renderState(it) }
+
         callViewModel.observeViewEvents { handleViewEvents(it) }
 
         callViewModel.onEach(VectorCallViewState::callId, VectorCallViewState::isVideoCall) { _, isVideoCall ->
@@ -410,13 +413,20 @@ class VectorCallActivity :
 
     private fun reattachRenderersToCall() {
         val callId = withState(callViewModel) { it.callId }
-        callManager.getCallById(callId)?.also { webRtcCall ->
+        val webRtcCall = callManager.getCallById(callId)
+        if (webRtcCall != null) {
             webRtcCall.attachViewRenderers(
                     views.pipRenderer,
                     views.fullscreenRenderer,
                     intent.getStringExtra(EXTRA_MODE)
             )
             intent.removeExtra(EXTRA_MODE)
+        } else {
+            if (isFinishing || isDestroyed) return
+            Timber.tag(loggerTag.value).w("reattachRenderersToCall: call $callId not found, retrying...")
+            views.root.postDelayed({
+                if (!isFinishing && !isDestroyed) reattachRenderersToCall()
+            }, 500)
         }
     }
 
@@ -750,16 +760,8 @@ class VectorCallActivity :
         if (callEndHandled) return
         callEndHandled = true
         notificationDrawerManager.clearAllEvents()
-        // Cancel notifications from activity side too
         androidx.core.app.NotificationManagerCompat.from(applicationContext).cancelAll()
         CallForegroundService.stop(applicationContext)
-        val callId = withState(callViewModel) { it.callId }
-        CallAndroidService.onCallTerminated(
-                applicationContext,
-                callId,
-                callState.reason,
-                callState.reason == org.matrix.android.sdk.api.session.room.model.call.EndCallReason.USER_HANGUP
-        )
         finishAndRemoveTask()
     }
     private fun showEndCallDialog(@StringRes title: Int, @StringRes description: Int) {

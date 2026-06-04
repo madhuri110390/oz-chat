@@ -99,10 +99,14 @@ class VectorFirebaseMessagingService : FirebaseMessagingService() {
                 .isAtLeast(Lifecycle.State.STARTED)
 
         // Suppress non-call notifications when a call is active
+        // AFTER:
         val hasActiveCall = webRtcCallManager.getCalls().isNotEmpty()
+        val callRecentlyActiveInRoom = roomId != null &&
+                webRtcCallManager.wasCallRecentlyActiveInRoom(roomId)
 
         val skipPlaceholder = !isCallPush && (
                 hasActiveCall ||
+                        callRecentlyActiveInRoom ||
                         (activeSessionHolder.hasActiveSession() &&
                                 roomId != null &&
                                 isAppInForeground &&

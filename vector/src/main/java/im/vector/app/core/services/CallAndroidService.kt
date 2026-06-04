@@ -108,6 +108,9 @@ class CallAndroidService : VectorAndroidService() {
         when (intent?.action) {
             ACTION_INCOMING_RINGING_CALL -> {
                 mediaSession?.isActive = true
+                // Stop CallForegroundService first — it was started by FCM push
+                // and is already ringing. We take over ring management here.
+                CallForegroundService.stop(applicationContext)
                 val fromBg = intent.getBooleanExtra(EXTRA_IS_IN_BG, false)
                 val callId = intent.getStringExtra(EXTRA_CALL_ID)
                 val customTone = callId
@@ -125,6 +128,8 @@ class CallAndroidService : VectorAndroidService() {
             ACTION_ONGOING_CALL -> {
                 incomingCallRinger.stop()
                 callRingPlayerOutgoing?.stop()
+                // Also stop FCM foreground service in case it's still alive
+                CallForegroundService.stop(applicationContext)
                 displayCallInProgressNotification(intent)
             }
             ACTION_CALL_TERMINATED -> {
@@ -225,39 +230,46 @@ class CallAndroidService : VectorAndroidService() {
         alertManager.cancelAlert(callId)
         notificationManager.cancel(callId.hashCode())
         notificationManager.cancel(NotificationUtils.CALL_NOTIFICATION_ID)
-        notificationManager.cancelAll()
+// Don't cancelAll() — missed call notification posted by WebRtcCallManager
         CallForegroundService.stop(applicationContext)
 
         val terminatedCall = knownCalls.remove(callId)
         val wasConnected = connectedCallIds.remove(callId)
 
-        val shouldShowMissedCall = !wasConnected &&
-                !isOutgoing &&
-                !rejected &&
-                endCallReason != EndCallReason.ANSWERED_ELSEWHERE
+        val callInfo = terminatedCall ?: if (nativeRoomId != null) {
+            CallInformation(
+                    callId = callId,
+                    nativeRoomId = nativeRoomId,
+                    opponentUserId = opponentUserId,
+                    opponentMatrixItem = null,
+                    isVideoCall = isVideoCall,
+                    isOutgoing = isOutgoing
+            )
+        } else null
 
-        if (shouldShowMissedCall) {
-            val missedCallInfo = terminatedCall ?: if (nativeRoomId != null) {
-                CallInformation(
-                        callId = callId,
-                        nativeRoomId = nativeRoomId,
-                        opponentUserId = opponentUserId,
-                        opponentMatrixItem = null,
-                        isVideoCall = isVideoCall,
-                        isOutgoing = false
-                )
-            } else null
-
-            if (missedCallInfo != null) {
-                Timber.tag(loggerTag.value).v("Showing missed call notification for $callId")
-                val missedCallNotification = notificationUtils.buildCallMissedNotification(missedCallInfo)
-                notificationManager.notify(
-                        MISSED_CALL_TAG,
-                        missedCallInfo.nativeRoomId.hashCode(),
-                        missedCallNotification
-                )
-            }
-        }
+//        if (callInfo != null && !wasConnected && !rejected &&
+//                endCallReason != EndCallReason.ANSWERED_ELSEWHERE) {
+//
+//            if (isOutgoing) {
+//                // Caller side — receiver didn't answer
+//                Timber.tag(loggerTag.value).v("Showing call not answered notification for $callId")
+//                val notification = notificationUtils.buildCallNotAnsweredNotification(callInfo)
+//                notificationManager.notify(
+//                        MISSED_CALL_TAG,
+//                        callInfo.nativeRoomId.hashCode(),
+//                        notification
+//                )
+//            } else {
+//                // Receiver side — missed incoming call
+//                Timber.tag(loggerTag.value).v("Showing missed call notification for $callId")
+//                val notification = notificationUtils.buildCallMissedNotification(callInfo)
+//                notificationManager.notify(
+//                        MISSED_CALL_TAG,
+//                        callInfo.nativeRoomId.hashCode(),
+//                        notification
+//                )
+//            }
+//        }
 
         if (knownCalls.isEmpty()) {
             Timber.tag(loggerTag.value).v("No more calls, stopping service")

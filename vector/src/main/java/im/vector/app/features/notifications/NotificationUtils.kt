@@ -630,6 +630,37 @@ class NotificationUtils @Inject constructor(
      * For messages: respects the [noisy] flag to pick the correct channel.
 
      */
+    fun buildCallNotAnsweredNotification(callInformation: CallAndroidService.CallInformation): Notification {
+        val accentColor = ContextCompat.getColor(context, im.vector.lib.ui.styles.R.color.notification_accent_color)
+        val contentPendingIntent = TaskStackBuilder.create(context)
+                .addNextIntentWithParentStack(HomeActivity.newIntent(context, firstStartMainActivity = false))
+                .addNextIntent(RoomDetailActivity.newIntent(context, TimelineArgs(callInformation.nativeRoomId), true))
+                .getPendingIntent(
+                        clock.epochMillis().toInt(),
+                        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntentCompat.FLAG_IMMUTABLE
+                )
+
+        return NotificationCompat.Builder(context, NOISY_NOTIFICATION_CHANNEL_ID)
+                .setContentTitle(callInformation.opponentMatrixItem?.getBestName() ?: callInformation.opponentUserId)
+                .apply {
+                    if (callInformation.isVideoCall) {
+                        setContentText("Video call not answered")
+                        setSmallIcon(R.drawable.ic_missed_video_call)
+                    } else {
+                        setContentText("Voice call not answered")
+                        setSmallIcon(R.drawable.ic_missed_voice_call)
+                    }
+                }
+                .setShowWhen(true)
+                .setColor(accentColor)
+                .setAutoCancel(true)
+                .setCategory(NotificationCompat.CATEGORY_MISSED_CALL)
+                .setPriority(NotificationCompat.PRIORITY_HIGH)
+                .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
+                .setDefaults(NotificationCompat.DEFAULT_ALL)
+                .setContentIntent(contentPendingIntent)
+                .build()
+    }
     private fun buildCallFullScreenPendingIntent(
             context: Context,
             roomId: String?,

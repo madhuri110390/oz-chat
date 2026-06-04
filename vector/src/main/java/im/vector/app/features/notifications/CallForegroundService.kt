@@ -26,10 +26,8 @@ class CallForegroundService : Service() {
         const val ACTION_STOP = "ACTION_STOP"
 
         fun stop(context: Context) {
-            // Cancel ALL possible notification IDs used by call notifications
-            val nm = NotificationManagerCompat.from(context)
-            nm.cancel(NotificationUtils.CALL_NOTIFICATION_ID)
-            nm.cancelAll()  // ← nuclear option — clears everything
+            NotificationManagerCompat.from(context).cancel(NotificationUtils.CALL_NOTIFICATION_ID)
+            NotificationManagerCompat.from(context).cancelAll()
             val intent = Intent(context, CallForegroundService::class.java).apply {
                 action = ACTION_STOP
             }
@@ -49,10 +47,9 @@ class CallForegroundService : Service() {
                 return START_NOT_STICKY
             }
         }
-        return START_STICKY
+        return START_NOT_STICKY  // ← changed from START_STICKY — never restart automatically
     }
 
-    // Always stop ringer when service is destroyed — covers all exit paths
     override fun onDestroy() {
         incomingCallRinger.stop()
         NotificationManagerCompat.from(this).cancel(NotificationUtils.CALL_NOTIFICATION_ID)
@@ -107,7 +104,9 @@ class CallForegroundService : Service() {
                 isVideoCall = false,
                 mode = null,
         ).apply {
-            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or
+                    Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                    Intent.FLAG_ACTIVITY_SINGLE_TOP)
         }
 
         val fullScreenPi = PendingIntent.getActivity(
@@ -120,6 +119,7 @@ class CallForegroundService : Service() {
                 Intent(this, CallActionReceiver::class.java).apply {
                     action = CallActionReceiver.ACTION_ACCEPT
                     putExtra("callId", callId)
+                    putExtra("room_id", roomId)  // ← pass roomId so accept works before sync
                 },
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
@@ -129,6 +129,7 @@ class CallForegroundService : Service() {
                 Intent(this, CallActionReceiver::class.java).apply {
                     action = CallActionReceiver.ACTION_DECLINE
                     putExtra("callId", callId)
+                    putExtra("room_id", roomId)
                 },
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )

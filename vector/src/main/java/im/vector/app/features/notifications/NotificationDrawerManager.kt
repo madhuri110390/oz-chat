@@ -47,6 +47,7 @@ class NotificationDrawerManager @Inject constructor(
         private val notificationEventPersistence: NotificationEventPersistence,
         private val filteredEventDetector: FilteredEventDetector,
         private val buildMeta: BuildMeta,
+        private val webRtcCallManager: im.vector.app.features.call.webrtc.WebRtcCallManager,
 ) {
 
     private val handlerThread: HandlerThread = HandlerThread("NotificationDrawerManager", Thread.MIN_PRIORITY)
@@ -107,7 +108,12 @@ class NotificationDrawerManager @Inject constructor(
             Timber.d("onNotifiableEventReceived(): ignore the event")
             return
         }
-
+// AFTER:
+        if (notifiableEvent is NotifiableMessageEvent &&
+                webRtcCallManager.wasCallRecentlyActiveInRoom(notifiableEvent.roomId)) {
+            Timber.d("Suppressing message — call recently active in room ${notifiableEvent.roomId}")
+            return
+        }
         add(notifiableEvent)
     }
 
