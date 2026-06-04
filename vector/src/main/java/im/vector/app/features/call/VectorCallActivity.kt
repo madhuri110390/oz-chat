@@ -762,6 +762,27 @@ class VectorCallActivity :
         notificationDrawerManager.clearAllEvents()
         androidx.core.app.NotificationManagerCompat.from(applicationContext).cancelAll()
         CallForegroundService.stop(applicationContext)
+
+        // Show toast on caller side when receiver rejects
+        val callArgs = intent.getParcelableExtraCompat<CallArgs>(Mavericks.KEY_ARG)
+        val isOutgoing = callArgs?.isIncomingCall == false
+        val formattedDuration = withState(callViewModel) { it.formattedDuration }
+        val callNotAnswered = formattedDuration.isEmpty() || formattedDuration == "00:00"
+
+        if (isOutgoing && callNotAnswered) {
+            when (callState.reason) {
+                EndCallReason.USER_HANGUP -> {
+                    // Receiver explicitly rejected
+                    Toast.makeText(this, "Call rejected", Toast.LENGTH_SHORT).show()
+                }
+                EndCallReason.INVITE_TIMEOUT -> {
+                    // No answer within ring timeout
+                    Toast.makeText(this, "No answer", Toast.LENGTH_SHORT).show()
+                }
+                else -> Unit
+            }
+        }
+
         finishAndRemoveTask()
     }
     private fun showEndCallDialog(@StringRes title: Int, @StringRes description: Int) {
