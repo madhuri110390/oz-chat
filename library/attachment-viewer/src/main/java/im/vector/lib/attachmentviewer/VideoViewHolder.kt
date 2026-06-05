@@ -76,6 +76,7 @@ class VideoViewHolder constructor(itemView: View) :
             if (views.videoView.isPlaying) {
                 progress = views.videoView.currentPosition
                 views.videoView.pause()
+                views.videoView.stopPlayback()
             } else {
                 progress = 0
             }

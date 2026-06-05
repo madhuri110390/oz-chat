@@ -403,7 +403,7 @@ class WebRtcCall(
         tryOrNull { onCallBecomeActive(this@WebRtcCall) }
         val turnServerResponse = getTurnServer()
         withContext(Dispatchers.Main) {
-            CallAndroidService.onPendingCall(context = context, callId = mxCall.callId)
+          //  CallAndroidService.onPendingCall(context = context, callId = mxCall.callId)
         }
         createPeerConnection(turnServerResponse)
 

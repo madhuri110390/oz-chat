@@ -12,14 +12,15 @@ import android.content.Context
 import android.media.AudioAttributes
 import android.media.AudioManager
 import android.media.MediaPlayer
+import android.media.Ringtone
 import android.media.RingtoneManager
+import android.media.ToneGenerator
 import android.net.Uri
 import android.os.Build
 import android.os.VibrationEffect
 import android.os.Vibrator
 import androidx.core.content.getSystemService
 import im.vector.app.R
-import im.vector.app.features.call.audio.CallAudioManager.Mode
 import im.vector.app.features.call.webrtc.WebRtcCallManager
 import im.vector.app.features.notifications.NotificationUtils
 import org.matrix.android.sdk.api.extensions.orFalse
@@ -49,26 +50,7 @@ class CallRingPlayerIncoming(
         }
     }
 
-//    private fun playRingtoneIfNeeded(incomingCallChannel: NotificationChannel?) {
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && incomingCallChannel?.sound != null) {
-//            Timber.v("Ringtone already configured by notification channel")
-//            return
-//        }
-//        val ringtoneUri = RingtoneManager.getDefaultUri(RingtoneManager.TYPE_RINGTONE)
-//        ringtone = RingtoneManager.getRingtone(applicationContext, ringtoneUri)
-//        Timber.v("Play ringtone for incoming call")
-//
-//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-//            ringtone?.isLooping = true
-//        }
-//        ringtone?.play()
-//    }
-
     private fun playRingtoneIfNeeded(incomingCallChannel: NotificationChannel?, customToneUri: Uri?) {
-        // Single-owner ringtone playback: the call notification channel intentionally
-        // has no sound (see NotificationUtils), so the OS does NOT auto-play. We manage
-        // the MediaPlayer here and stop after a fixed number of cycles (WhatsApp-like).
-        // If a per-room custom tone is set, it wins; otherwise system default ringtone.
         ringPlayer?.release()
         ringPlayer = null
         ringCyclesPlayed = 0
@@ -128,6 +110,7 @@ class CallRingPlayerIncoming(
             stop()
         }
     }
+
     private fun vibrateIfNeeded(incomingCallChannel: NotificationChannel?) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && incomingCallChannel?.shouldVibrate().orFalse()) {
             Timber.v("## Vibration already configured by notification channel")
@@ -160,75 +143,33 @@ class CallRingPlayerOutgoing(
 
     private val applicationContext = context.applicationContext
 
-    private var player: MediaPlayer? = null
+    private var ringtone: Ringtone? = null
+    private var mediaPlayer: MediaPlayer? = null
 
     fun start() {
-        // Set RINGTONE mode while outgoing is ringing — not VOICE_COMMUNICATION
-        // which suppresses audio on some devices
-        val audioManager = applicationContext.getSystemService<android.media.AudioManager>()
-        @Suppress("DEPRECATION")
-        audioManager?.mode = android.media.AudioManager.MODE_RINGTONE
-        player?.release()
-        player = createPlayer()
-        if (player != null) {
-            try {
-                if (player?.isPlaying == false) {
-                    player?.start()
-                    Timber.v("## VOIP Starting ringing outgoing")
-                } else {
-                    Timber.v("## VOIP already playing")
-                }
-            } catch (failure: Throwable) {
-                Timber.e(failure, "## VOIP Failed to start ringing outgoing")
-                player = null
-            }
-        }
-    }
+        stop()
 
-    private fun WebRtcCallManager.setAudioModeToCallType() {
-        val callMode = if (currentCall.get()?.mxCall?.isVideoCall.orFalse()) Mode.VIDEO_CALL else Mode.AUDIO_CALL
-        audioManager.setMode(callMode)
+        try {
+            mediaPlayer = MediaPlayer.create(
+                    applicationContext,
+                    R.raw.ring
+            )
+
+            mediaPlayer?.isLooping = true
+            mediaPlayer?.setVolume(1f, 1f)
+            mediaPlayer?.start()
+
+        } catch (e: Exception) {
+            Timber.e(e, "Failed to play ringback")
+        }
     }
 
     fun stop() {
-        player?.release()
-        player = null
-        player = null
-        // Reset audio mode when ringing stops
-        val audioManager = applicationContext.getSystemService(android.content.Context.AUDIO_SERVICE)
-                as? android.media.AudioManager
-        audioManager?.mode = android.media.AudioManager.MODE_NORMAL
-    }
-
-    private fun createPlayer(): MediaPlayer? {
-        try {
-            val mediaPlayer = MediaPlayer.create(applicationContext, R.raw.ring)
-
-            mediaPlayer.setOnErrorListener(MediaPlayerErrorListener())
-            mediaPlayer.isLooping = true
-            if (Build.VERSION.SDK_INT > Build.VERSION_CODES.LOLLIPOP) {
-                mediaPlayer.setAudioAttributes(
-                        AudioAttributes.Builder()
-                                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                                .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
-                                .build()
-                )
-            } else {
-                @Suppress("DEPRECATION")
-                mediaPlayer.setAudioStreamType(AudioManager.STREAM_RING)
-            }
-            return mediaPlayer
-        } catch (failure: Throwable) {
-            Timber.e(failure, "Failed to create Call ring player")
-            return null
-        }
-    }
-
-    inner class MediaPlayerErrorListener : MediaPlayer.OnErrorListener {
-        override fun onError(mp: MediaPlayer, what: Int, extra: Int): Boolean {
-            Timber.w("onError($mp, $what, $extra")
-            player = null
-            return false
-        }
+        mediaPlayer?.stop()
+        mediaPlayer?.release()
+        mediaPlayer = null
     }
 }
+
+
+

@@ -7,7 +7,9 @@
 
 package im.vector.app.features.call.audio
 
+import android.annotation.SuppressLint
 import android.media.AudioManager
+import android.os.Build
 import androidx.media.AudioAttributesCompat
 import androidx.media.AudioFocusRequestCompat
 import androidx.media.AudioManagerCompat
@@ -22,12 +24,57 @@ class DefaultAudioDeviceRouter(
 
     private var focusRequestCompat: AudioFocusRequestCompat? = null
 
-    override fun setAudioRoute(device: CallAudioManager.Device) {
-        @Suppress("DEPRECATION")
-        audioManager.isSpeakerphoneOn = device is CallAudioManager.Device.Speaker
-        setBluetoothAudioRoute(device is CallAudioManager.Device.WirelessHeadset)
-    }
+//    override fun setAudioRoute(device: CallAudioManager.Device) {
+//        @Suppress("DEPRECATION")
+//        audioManager.isSpeakerphoneOn = device is CallAudioManager.Device.Speaker
+//        setBluetoothAudioRoute(device is CallAudioManager.Device.WirelessHeadset)
+//    }
+override fun setAudioRoute(device: CallAudioManager.Device) {
 
+    audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
+    audioManager.isMicrophoneMute = false
+
+    when (device) {
+
+        is CallAudioManager.Device.WirelessHeadset -> {
+            setBluetoothAudioRoute(true)
+        }
+
+        is CallAudioManager.Device.Speaker -> {
+
+            setBluetoothAudioRoute(false)
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                audioManager.availableCommunicationDevices
+                        .firstOrNull {
+                            it.type == android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
+                        }
+                        ?.let { audioManager.setCommunicationDevice(it) }
+            } else {
+                @Suppress("DEPRECATION")
+                audioManager.isSpeakerphoneOn = true
+            }
+        }
+
+        else -> {
+
+            setBluetoothAudioRoute(false)
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                audioManager.availableCommunicationDevices
+                        .firstOrNull {
+                            it.type == android.media.AudioDeviceInfo.TYPE_BUILTIN_EARPIECE
+                        }
+                        ?.let { audioManager.setCommunicationDevice(it) }
+            } else {
+                @Suppress("DEPRECATION")
+                audioManager.isSpeakerphoneOn = false
+            }
+        }
+    }
+}
+
+    @SuppressLint("WrongConstant")
     override fun setMode(mode: CallAudioManager.Mode): Boolean {
         if (mode === CallAudioManager.Mode.DEFAULT) {
             audioFocusLost = false

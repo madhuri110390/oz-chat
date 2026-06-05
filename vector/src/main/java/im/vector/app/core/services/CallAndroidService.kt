@@ -127,8 +127,7 @@ class CallAndroidService : VectorAndroidService() {
             }
             ACTION_ONGOING_CALL -> {
                 incomingCallRinger.stop()
-                callRingPlayerOutgoing?.stop()
-                // Also stop FCM foreground service in case it's still alive
+               // callRingPlayerOutgoing?.stop()
                 CallForegroundService.stop(applicationContext)
                 displayCallInProgressNotification(intent)
             }

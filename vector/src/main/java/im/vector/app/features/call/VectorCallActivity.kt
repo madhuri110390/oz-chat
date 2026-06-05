@@ -17,6 +17,8 @@ import android.content.Intent
 import android.content.Intent.FLAG_ACTIVITY_CLEAR_TOP
 import android.content.pm.PackageManager
 import android.graphics.Color
+import android.media.AudioManager
+import android.media.ToneGenerator
 import android.media.projection.MediaProjection
 import android.media.projection.MediaProjectionManager
 import android.os.Build
@@ -101,7 +103,7 @@ data class CallArgs(
 ) : Parcelable
 
 private val loggerTag = LoggerTag("VectorCallActivity", LoggerTag.VOIP)
-
+private var toneGenerator: ToneGenerator? = null
 @AndroidEntryPoint
 class VectorCallActivity :
         VectorBaseActivity<ActivityCallBinding>(),
@@ -482,6 +484,15 @@ class VectorCallActivity :
                 showAvatarLayout(state)
                 hideVideoLayout()
                 toolbar?.setSubtitle(CommonStrings.call_ringing)
+
+                if (toneGenerator == null) {
+                    toneGenerator = ToneGenerator(
+                            AudioManager.STREAM_VOICE_CALL,
+                            80
+                    )
+                }
+
+                toneGenerator?.startTone(ToneGenerator.TONE_SUP_RINGTONE)
             }
 
             is CallState.Answering -> {
