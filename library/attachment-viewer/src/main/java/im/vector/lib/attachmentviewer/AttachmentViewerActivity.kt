@@ -82,6 +82,7 @@ abstract class AttachmentViewerActivity : AppCompatActivity(), AttachmentEventLi
         setDecorViewFullScreen()
         views = ActivityAttachmentViewerBinding.inflate(layoutInflater)
         setContentView(views.root)
+        views.backgroundView.alpha = 0f
         views.attachmentPager.apply {
             orientation = ViewPager2.ORIENTATION_HORIZONTAL
             adapter = attachmentsAdapter
@@ -114,18 +115,22 @@ abstract class AttachmentViewerActivity : AppCompatActivity(), AttachmentEventLi
     }
 
     private fun setDecorViewFullScreen() {
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            WindowCompat.setDecorFitsSystemWindows(window,true)
-            window.decorView.windowInsetsController?.hide(WindowInsets.Type.systemBars())
-            window.decorView.windowInsetsController?.systemBarsBehavior =
-                    WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            window.decorView.windowInsetsController?.apply {
+                hide(WindowInsets.Type.systemBars())
+                systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+            }
         } else {
             @Suppress("DEPRECATION")
             window.decorView.systemUiVisibility = (
                     View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
                             View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
                             View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
-                            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
+                            View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                            View.SYSTEM_UI_FLAG_FULLSCREEN
                     )
         }
     }
@@ -233,7 +238,7 @@ private fun handleSingleTap(event: MotionEvent, isOverlayWasClicked: Boolean) {
 
     private fun handleSwipeViewMove(translationY: Float, translationLimit: Int) {
         val alpha = 1.0f - 1.0f / translationLimit.toFloat() / 4f * abs(translationY)
-        views.backgroundView.alpha = alpha
+        views.backgroundView.alpha = alpha  // ← this sets it back to 1 on load
         views.dismissContainer.alpha = alpha
         overlayView?.alpha = alpha
     }
@@ -266,8 +271,12 @@ private fun handleSingleTap(event: MotionEvent, isOverlayWasClicked: Boolean) {
     protected open fun shouldAnimateDismiss(): Boolean = true
 
     protected open fun animateClose() {
-        @Suppress("DEPRECATION")
-        window.statusBarColor = ContextCompat.getColor(this, R.color.half_transparent_status_bar)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.VANILLA_ICE_CREAM) {
+            // Android 15+ — colors handled via WindowCompat, nothing needed
+        } else {
+            @Suppress("DEPRECATION")
+            window.statusBarColor = ContextCompat.getColor(this, R.color.half_transparent_status_bar)
+        }
         finish()
     }
 

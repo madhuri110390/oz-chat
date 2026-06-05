@@ -163,7 +163,11 @@ class CallRingPlayerOutgoing(
     private var player: MediaPlayer? = null
 
     fun start() {
-        callManager.setAudioModeToCallType()
+        // Set RINGTONE mode while outgoing is ringing — not VOICE_COMMUNICATION
+        // which suppresses audio on some devices
+        val audioManager = applicationContext.getSystemService<android.media.AudioManager>()
+        @Suppress("DEPRECATION")
+        audioManager?.mode = android.media.AudioManager.MODE_RINGTONE
         player?.release()
         player = createPlayer()
         if (player != null) {
@@ -189,6 +193,11 @@ class CallRingPlayerOutgoing(
     fun stop() {
         player?.release()
         player = null
+        player = null
+        // Reset audio mode when ringing stops
+        val audioManager = applicationContext.getSystemService(android.content.Context.AUDIO_SERVICE)
+                as? android.media.AudioManager
+        audioManager?.mode = android.media.AudioManager.MODE_NORMAL
     }
 
     private fun createPlayer(): MediaPlayer? {
@@ -200,11 +209,8 @@ class CallRingPlayerOutgoing(
             if (Build.VERSION.SDK_INT > Build.VERSION_CODES.LOLLIPOP) {
                 mediaPlayer.setAudioAttributes(
                         AudioAttributes.Builder()
-                                .setContentType(AudioAttributes.CONTENT_TYPE_SPEECH)
-                                .setUsage(AudioAttributes.USAGE_VOICE_COMMUNICATION)
-                                // TODO Change to ?
-                                // .setContentType(AudioAttributes.CONTENT_TYPE_UNKNOWN)
-                                // .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                                .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                                .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
                                 .build()
                 )
             } else {

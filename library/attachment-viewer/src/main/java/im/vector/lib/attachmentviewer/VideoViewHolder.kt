@@ -75,7 +75,7 @@ class VideoViewHolder constructor(itemView: View) :
         if (!selected) {
             if (views.videoView.isPlaying) {
                 progress = views.videoView.currentPosition
-                views.videoView.stopPlayback()
+                views.videoView.pause()
             } else {
                 progress = 0
             }
@@ -95,7 +95,7 @@ class VideoViewHolder constructor(itemView: View) :
 
         setVideoAndPlay()
     }
-//    private fun startPlaying() {
+    //    private fun startPlaying() {
 //        views.videoThumbnailImage.isVisible = false
 //        views.videoLoaderProgress.isVisible = false
 //        views.videoControlIcon.isVisible = false
@@ -116,8 +116,9 @@ class VideoViewHolder constructor(itemView: View) :
 //        }
 //    }
     private fun setVideoAndPlay() {
+        views.videoView.stopPlayback()
         views.videoView.setOnPreparedListener { mp ->
-            mp.setVideoScalingMode(android.media.MediaPlayer.VIDEO_SCALING_MODE_SCALE_TO_FIT)
+            mp.setVideoScalingMode(android.media.MediaPlayer.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING)
             stopTimer()
             countUpTimer = CountUpTimer(intervalInMs = 100).also {
                 it.tickListener = CountUpTimer.TickListener {

@@ -138,7 +138,8 @@ class VectorAttachmentViewerActivity : AttachmentViewerActivity(), AttachmentInt
                 onSelectedPositionChanged(initialIndex)
             }
         }
-
+//        window.statusBarColor = android.graphics.Color.TRANSPARENT
+//        window.navigationBarColor = android.graphics.Color.TRANSPARENT
 //        window.statusBarColor = ContextCompat.getColor(this, im.vector.lib.ui.styles.R.color.black_alpha)
 //        window.navigationBarColor = ContextCompat.getColor(this, im.vector.lib.ui.styles.R.color.black_alpha)
 

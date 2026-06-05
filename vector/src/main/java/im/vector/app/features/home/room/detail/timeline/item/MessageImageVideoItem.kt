@@ -8,11 +8,13 @@
 package im.vector.app.features.home.room.detail.timeline.item
 
 import android.content.res.ColorStateList
+import android.os.Build
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.ImageView
+import androidx.annotation.RequiresApi
 import androidx.core.view.ViewCompat
 import androidx.core.view.isVisible
 import com.airbnb.epoxy.EpoxyAttribute
@@ -57,9 +59,16 @@ abstract class MessageImageVideoItem : AbsMessageItem<MessageImageVideoItem.Hold
     lateinit var contentUploadStateTrackerBinder: ContentUploadStateTrackerBinder
     private var hideControlsRunnable: Runnable? = null
     var isPlaying: Boolean = false
+    @RequiresApi(Build.VERSION_CODES.P)
     override fun bind(holder: Holder) {
         super.bind(holder)
         holder.imageView.visibility = View.VISIBLE
+        holder.playContentView.background = null
+        holder.playContentView.imageTintList = null
+        holder.playContentView.setColorFilter(null)
+        holder.imageCard.cardElevation = 0f
+        holder.imageCard.outlineAmbientShadowColor = android.graphics.Color.TRANSPARENT
+        holder.imageCard.outlineSpotShadowColor = android.graphics.Color.TRANSPARENT
         val messageLayout = baseAttributes.informationData.messageLayout
         val dimensionConverter = DimensionConverter(holder.view.resources)
         val imageCornerTransformation = if (messageLayout is TimelineMessageLayout.Bubble) {
@@ -186,6 +195,8 @@ abstract class MessageImageVideoItem : AbsMessageItem<MessageImageVideoItem.Hold
     }
 
     override fun unbind(holder: Holder) {
+        holder.playContentView.imageTintList = null
+        holder.playContentView.setColorFilter(null)
         Glide.with(holder.view.context.applicationContext).clear(holder.imageView)
         hideControlsRunnable?.let { holder.playContentView.removeCallbacks(it) }
         hideControlsRunnable = null
