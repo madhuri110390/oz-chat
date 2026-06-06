@@ -119,7 +119,11 @@ class VideoViewHolder constructor(itemView: View) :
     private fun setVideoAndPlay() {
         views.videoView.stopPlayback()
         views.videoView.setOnPreparedListener { mp ->
-            mp.setVideoScalingMode(android.media.MediaPlayer.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING)
+           // mp.setVideoScalingMode(android.media.MediaPlayer.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING)
+
+            views.videoView.visibility = View.VISIBLE
+            views.videoView.translationZ = 0f
+            views.videoView.elevation = 0f
             stopTimer()
             countUpTimer = CountUpTimer(intervalInMs = 100).also {
                 it.tickListener = CountUpTimer.TickListener {
@@ -249,6 +253,7 @@ class VideoViewHolder constructor(itemView: View) :
         views.videoThumbnailImage.setOnClickListener {
             views.videoControlIcon.performClick()
         }
+
 //        views.videoThumbnailImage.setOnClickListener {
 //            eventListener?.get()?.onEvent(AttachmentEvents.VideoEvent(false, 0, 0))
 //            if (mVideoPath != null) {
@@ -257,3 +262,7 @@ class VideoViewHolder constructor(itemView: View) :
 //        }
     }
 }
+
+
+
+

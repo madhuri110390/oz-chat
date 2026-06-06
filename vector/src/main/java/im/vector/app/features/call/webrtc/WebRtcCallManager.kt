@@ -496,30 +496,57 @@ class WebRtcCallManager @Inject constructor(
             }
         }
     }
-
     override fun onCallRejectReceived(callRejectContent: CallRejectContent) {
         Timber.tag(loggerTag.value).v("onCallRejectReceived for call ${callRejectContent.callId}")
+
         val call = callsByCallId[callRejectContent.callId]
                 ?: return Unit.also {
-                    Timber.tag(loggerTag.value).w("onCallRejectReceived for non active call? ${callRejectContent.callId}")
+                    Timber.tag(loggerTag.value).w(
+                            "onCallRejectReceived for non active call? ${callRejectContent.callId}"
+                    )
                 }
+
         call.onCallRejectReceived(callRejectContent)
-        // Safety net: force terminate if WebRtcCall didn't self-terminate
+
         ringTimeoutScope.launch {
             delay(500)
+
             if (callsByCallId.containsKey(callRejectContent.callId)) {
                 Timber.tag(loggerTag.value).w(
-                        "Force terminating call ${callRejectContent.callId} — " +
-                                "WebRtcCall did not self-terminate after reject"
+                        "Force terminating call ${callRejectContent.callId}"
                 )
+
                 onCallEnded(
                         callRejectContent.callId,
                         EndCallReason.USER_HANGUP,
-                        rejected = true
+                        rejected = false
                 )
             }
         }
     }
+//    override fun onCallRejectReceived(callRejectContent: CallRejectContent) {
+//        Timber.tag(loggerTag.value).v("onCallRejectReceived for call ${callRejectContent.callId}")
+//        val call = callsByCallId[callRejectContent.callId]
+//                ?: return Unit.also {
+//                    Timber.tag(loggerTag.value).w("onCallRejectReceived for non active call? ${callRejectContent.callId}")
+//                }
+//        call.onCallRejectReceived(callRejectContent)
+//        // Safety net: force terminate if WebRtcCall didn't self-terminate
+//        ringTimeoutScope.launch {
+//            delay(500)
+//            if (callsByCallId.containsKey(callRejectContent.callId)) {
+//                Timber.tag(loggerTag.value).w(
+//                        "Force terminating call ${callRejectContent.callId} — " +
+//                                "WebRtcCall did not self-terminate after reject"
+//                )
+//                onCallEnded(
+//                        callRejectContent.callId,
+//                        EndCallReason.USER_HANGUP,
+//                        rejected = true
+//                )
+//            }
+//        }
+//    }
 
     override fun onCallSelectAnswerReceived(callSelectAnswerContent: CallSelectAnswerContent) {
         val call = callsByCallId[callSelectAnswerContent.callId]

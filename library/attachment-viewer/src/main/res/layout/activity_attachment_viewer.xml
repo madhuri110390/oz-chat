@@ -4,7 +4,6 @@
     android:id="@+id/rootContainer"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@android:color/transparent"
     tools:context=".AttachmentViewerActivity">
 
     <View
@@ -12,7 +11,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:alpha="0"
-        android:background="@android:color/black" />
+       />
 
     <FrameLayout
         android:id="@+id/dismissContainer"

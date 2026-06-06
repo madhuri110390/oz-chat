@@ -9,8 +9,8 @@
     <View
         android:id="@+id/overlayTopBackground"
         android:layout_width="match_parent"
-        android:layout_height="90dp"
-        android:background="@color/half_transparent_status_bar"
+        android:layout_height="56dp"
+        android:background="@android:color/transparent"
         app:layout_constraintTop_toTopOf="parent">
 
     </View>

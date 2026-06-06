@@ -8,11 +8,13 @@
 package im.vector.app.features.home.room.detail.timeline.item
 
 import android.content.res.ColorStateList
+import android.os.Build
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
 import android.widget.ImageView
+import androidx.annotation.RequiresApi
 import androidx.core.view.ViewCompat
 import androidx.core.view.isVisible
 import com.airbnb.epoxy.EpoxyAttribute
@@ -57,17 +59,24 @@ abstract class MessageImageVideoItem : AbsMessageItem<MessageImageVideoItem.Hold
     lateinit var contentUploadStateTrackerBinder: ContentUploadStateTrackerBinder
     private var hideControlsRunnable: Runnable? = null
     var isPlaying: Boolean = false
+    @RequiresApi(Build.VERSION_CODES.M)
     override fun bind(holder: Holder) {
         super.bind(holder)
+        holder.imageView.clearColorFilter()
+        holder.imageView.alpha = 1f
         holder.imageView.visibility = View.VISIBLE
         val messageLayout = baseAttributes.informationData.messageLayout
         val dimensionConverter = DimensionConverter(holder.view.resources)
+//        holder.mediaContentView.setBackgroundColor(android.graphics.Color.TRANSPARENT)
+//        holder.imageCard.setCardBackgroundColor(android.graphics.Color.TRANSPARENT)
         val imageCornerTransformation = if (messageLayout is TimelineMessageLayout.Bubble) {
             messageLayout.cornersRadius.granularRoundedCorners()
         } else {
             RoundedCorners(dimensionConverter.dpToPx(8))
         }
         imageContentRenderer.render(mediaData, mode, holder.imageView, imageCornerTransformation)
+
+
 //        if (!attributes.informationData.sendState.hasFailed()) {
 //            contentUploadStateTrackerBinder.bind(
 //                    attributes.informationData.eventId,

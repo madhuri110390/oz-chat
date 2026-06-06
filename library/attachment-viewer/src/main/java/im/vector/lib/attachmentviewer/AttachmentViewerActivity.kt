@@ -41,7 +41,7 @@ abstract class AttachmentViewerActivity : AppCompatActivity(), AttachmentEventLi
 
     private var topInset = 0
     private var bottomInset = 0
-    private var systemUiVisibility = true
+    private var systemUiVisibility = false
 
     private var overlayView: View? = null
         set(value) {
@@ -105,13 +105,13 @@ abstract class AttachmentViewerActivity : AppCompatActivity(), AttachmentEventLi
         views.rootContainer.viewTreeObserver.addOnGlobalLayoutListener {
             swipeDismissHandler.translationLimit = views.dismissContainer.height / 4
         }
-        ViewCompat.setOnApplyWindowInsetsListener(views.rootContainer) { _, insets ->
-            val systemBarsInsets = insets.getInsets(WindowInsetsCompat.Type.systemBars())
-            overlayView?.updatePadding(top = systemBarsInsets.top, bottom = systemBarsInsets.bottom)
-            topInset = systemBarsInsets.top
-            bottomInset = systemBarsInsets.bottom
-            WindowInsetsCompat.CONSUMED
-        }
+     //   ViewCompat.setOnApplyWindowInsetsListener(views.rootContainer) { _, insets ->
+        //    val systemBarsInsets = insets.getInsets(WindowInsetsCompat.Type.systemBars())
+      //      overlayView?.updatePadding(top = systemBarsInsets.top, bottom = systemBarsInsets.bottom)
+//            topInset = systemBarsInsets.top
+//            bottomInset = systemBarsInsets.bottom
+ //           WindowInsetsCompat.CONSUMED
+   //     }
     }
 
     private fun setDecorViewFullScreen() {
@@ -122,17 +122,18 @@ abstract class AttachmentViewerActivity : AppCompatActivity(), AttachmentEventLi
                 hide(WindowInsets.Type.systemBars())
                 systemBarsBehavior = WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
             }
-        } else {
-            @Suppress("DEPRECATION")
-            window.decorView.systemUiVisibility = (
-                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
-                            View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
-                            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
-                            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
-                            View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
-                            View.SYSTEM_UI_FLAG_FULLSCREEN
-                    )
         }
+//        else {
+//            @Suppress("DEPRECATION")
+//            window.decorView.systemUiVisibility = (
+//                    View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY or
+//                            View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+//                            View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+//                            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
+//                            View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+//                            View.SYSTEM_UI_FLAG_FULLSCREEN
+//                    )
+//        }
     }
 
     fun onSelectedPositionChanged(position: Int) {
@@ -220,7 +221,7 @@ private fun handleSingleTap(event: MotionEvent, isOverlayWasClicked: Boolean) {
         if (systemUiVisibility) {
             hideSystemUI()
         } else {
-            showSystemUI()
+           hideSystemUI()
         }
     }
 
@@ -310,7 +311,7 @@ private fun handleSingleTap(event: MotionEvent, isOverlayWasClicked: Boolean) {
     }
 
     private fun showSystemUI() {
-        overlayView?.isVisible = true
+      //  overlayView?.isVisible = true
         systemUiVisibility = true
 /*        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             WindowCompat.setDecorFitsSystemWindows(window,false)
