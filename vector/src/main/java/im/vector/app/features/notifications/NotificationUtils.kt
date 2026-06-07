@@ -603,6 +603,7 @@ class NotificationUtils @Inject constructor(
                 }
                 .setShowWhen(true)
                 .setColor(accentColor)
+                .setOnlyAlertOnce(false)
                 .setAutoCancel(true)
                 .setCategory(NotificationCompat.CATEGORY_MISSED_CALL)
                 .setPriority(NotificationCompat.PRIORITY_HIGH)

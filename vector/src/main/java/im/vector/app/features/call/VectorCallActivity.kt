@@ -285,9 +285,13 @@ class VectorCallActivity :
     }
     override fun onResume() {
         super.onResume()
-        // Cancel call notification every time activity comes to foreground
-        // prevents CallStyle heads-up banner showing over the call screen
-        NotificationManagerCompat.from(this).cancel(NotificationUtils.CALL_NOTIFICATION_ID)
+        // Only cancel call notification if a call is actually active
+        withState(callViewModel) { state ->
+            val callState = state.callState.invoke()
+            if (callState !is CallState.Ended && callState != null) {
+                NotificationManagerCompat.from(this).cancel(NotificationUtils.CALL_NOTIFICATION_ID)
+            }
+        }
         stopMicrophoneService()
         enableImmersiveMode()
     }
