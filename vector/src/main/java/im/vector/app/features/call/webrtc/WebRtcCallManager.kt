@@ -243,9 +243,9 @@ class WebRtcCallManager @Inject constructor(
     ) {
         // Don't show if rejected by receiver or answered elsewhere
         if (rejected || endCallReason == EndCallReason.ANSWERED_ELSEWHERE) return
-
-        // Caller side — toast shown in VectorCallActivity, no notification needed
         if (isOutgoing) return
+        // Add this: don't show missed call if user actively rejected it
+        if (endCallReason == EndCallReason.USER_HANGUP && rejected) return
 
         // Receiver side only — show missed call notification
         val callInfo = im.vector.app.core.services.CallAndroidService.CallInformation(

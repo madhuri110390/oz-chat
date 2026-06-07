@@ -108,8 +108,7 @@ class CallAndroidService : VectorAndroidService() {
         when (intent?.action) {
             ACTION_INCOMING_RINGING_CALL -> {
                 mediaSession?.isActive = true
-                CallForegroundService.stop(applicationContext)
-                // Fix: set ringtone audio mode so earpiece is used, not speaker
+                CallForegroundService.stop(applicationContext)  // ← first call — KILLS foreground
                 callManager.audioManager.startRingingAudioMode()
                 val fromBg = intent.getBooleanExtra(EXTRA_IS_IN_BG, false)
                 val callId = intent.getStringExtra(EXTRA_CALL_ID)

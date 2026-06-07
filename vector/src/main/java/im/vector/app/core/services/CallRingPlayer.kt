@@ -40,27 +40,6 @@ class CallRingPlayerIncoming(
     private val RING_CYCLES = 8
     fun start(fromBg: Boolean, customToneUri: Uri? = null) {
         val audioManager = applicationContext.getSystemService<AudioManager>()
-
-        // Request audio focus FIRST — without this, STREAM_RING is silenced
-        // on many devices when the app is killed/backgrounded
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val focusRequest = android.media.AudioFocusRequest.Builder(
-                    AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE
-            )
-                    .setAudioAttributes(
-                            AudioAttributes.Builder()
-                                    .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
-                                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                                    .build()
-                    )
-                    .setAcceptsDelayedFocusGain(false)
-                    .build()
-            audioManager?.requestAudioFocus(focusRequest)
-        } else {
-            @Suppress("DEPRECATION")
-            audioManager?.requestAudioFocus(null, AudioManager.STREAM_RING, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE)
-        }
-
         val incomingCallChannel = notificationUtils.getChannelForIncomingCall(fromBg)
         val ringerMode = audioManager?.ringerMode
         if (ringerMode == AudioManager.RINGER_MODE_NORMAL) {
@@ -71,7 +50,6 @@ class CallRingPlayerIncoming(
     }
 
     private fun playRingtoneIfNeeded(incomingCallChannel: NotificationChannel?, customToneUri: Uri?) {
-        // Guard: if already playing, don't restart and lose cycle count
         if (ringPlayer != null) {
             Timber.v("Ringtone already playing — skipping restart")
             return
@@ -89,16 +67,20 @@ class CallRingPlayerIncoming(
         ringPlayer = player
 
         try {
-            player.setAudioAttributes(
-                    AudioAttributes.Builder()
-                            .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
-                            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                            .setLegacyStreamType(AudioManager.STREAM_RING)
-                            .build()
-            )
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                player.setAudioAttributes(
+                        AudioAttributes.Builder()
+                                .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                                .build()
+                )
+            } else {
+                @Suppress("DEPRECATION")
+                player.setAudioStreamType(AudioManager.STREAM_RING)
+            }
+
             player.setDataSource(applicationContext, ringtoneUri)
             player.isLooping = false
-            player.setOnPreparedListener { it.start() }
             player.setOnCompletionListener {
                 val current = ringPlayer ?: return@setOnCompletionListener
                 ringCyclesPlayed += 1
@@ -120,13 +102,17 @@ class CallRingPlayerIncoming(
                 stop()
                 false
             }
-            player.prepareAsync()
-            Timber.v("Preparing ringtone for incoming call ($RING_CYCLES cycles)")
+
+            player.prepare()
+            Timber.v("Play ringtone for incoming call (app-managed $RING_CYCLES cycles)")
+            player.start()
         } catch (failure: Throwable) {
             Timber.e(failure, "Failed to start incoming ringtone")
             stop()
         }
     }
+
+
 
     private fun vibrateIfNeeded(incomingCallChannel: NotificationChannel?) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && incomingCallChannel?.shouldVibrate().orFalse()) {
@@ -148,12 +134,9 @@ class CallRingPlayerIncoming(
     fun stop() {
         ringPlayer?.release()
         ringPlayer = null
-        ringCyclesPlayed = 0  // only reset here — start() must NOT reset this
+        ringCyclesPlayed = 0
         vibrator?.cancel()
         vibrator = null
-        val audioManager = applicationContext.getSystemService<AudioManager>()
-        @Suppress("DEPRECATION")
-        audioManager?.abandonAudioFocus(null)
     }
 
 }
