@@ -514,7 +514,10 @@
             android:name=".features.notifications.CallForegroundService"
             android:foregroundServiceType="phoneCall"
             android:exported="false" />
-
+        <service
+            android:name=".core.services.CallAndroidService"
+            android:foregroundServiceType="phoneCall"
+            android:exported="false" />
         <service
             android:name=".core.services.VectorSyncAndroidService"
             android:exported="false"
