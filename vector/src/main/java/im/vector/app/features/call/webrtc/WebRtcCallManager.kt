@@ -259,8 +259,11 @@ class WebRtcCallManager @Inject constructor(
         Timber.tag(loggerTag.value).v("Posting missed call notification for $callId")
 
         try {
-            nm.notify("MISSED_CALL_TAG", nativeRoomId.hashCode(),
-                    notificationUtils.buildCallMissedNotification(callInfo))
+            nm.notify(
+                    "MISSED_CALL_TAG",
+                    (nativeRoomId + callId).hashCode(),  // ← use callId too, not just roomId
+                    notificationUtils.buildCallMissedNotification(callInfo)
+            )
         } catch (e: Exception) {
             Timber.tag(loggerTag.value).e(e, "Failed to post missed call notification")
         }
