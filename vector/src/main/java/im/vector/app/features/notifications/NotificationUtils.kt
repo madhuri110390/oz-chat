@@ -512,8 +512,8 @@ class NotificationUtils @Inject constructor(
                 .setLights(accentColor, 500, 500)
                 .setColor(ThemeUtils.getColor(context, android.R.attr.colorPrimary))
                 .setOngoing(true)
-                .setPriority(NotificationCompat.PRIORITY_MAX)
-                .setFullScreenIntent(contentPendingIntent, true)
+                .setPriority(NotificationCompat.PRIORITY_LOW)
+                .setOnlyAlertOnce(true)
                 .setContentIntent(contentPendingIntent)
                 .addAction(
                         NotificationCompat.Action(

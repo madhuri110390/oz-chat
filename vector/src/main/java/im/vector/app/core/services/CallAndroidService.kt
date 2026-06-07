@@ -175,8 +175,9 @@ class CallAndroidService : VectorAndroidService() {
 
         val incomingCallAlert = IncomingCallAlert(callId,
                 shouldBeDisplayedIn = { activity ->
+                    // Don't show alert if VectorCallActivity is already handling this call
                     if (activity is VectorCallActivity) {
-                        activity.intent.getParcelableExtraCompat<CallArgs>(Mavericks.KEY_ARG)?.callId != call.callId
+                        false  // ← never show alert when call screen is open
                     } else true
                 }
         ).apply {

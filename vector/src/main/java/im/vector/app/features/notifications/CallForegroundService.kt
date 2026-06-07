@@ -131,33 +131,25 @@ private fun stopSelfClean() {
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val acceptIntent = Intent(this, CallActionReceiver::class.java).apply {
-            action = CallActionReceiver.ACTION_ACCEPT
-            putExtra("callId", callId)
-            putExtra("room_id", roomId)
-        }
         val acceptPi = PendingIntent.getBroadcast(
-                this, 1, acceptIntent,
+                this, 1,
+                Intent(this, CallActionReceiver::class.java).apply {
+                    action = CallActionReceiver.ACTION_ACCEPT
+                    putExtra("callId", callId)
+                    putExtra("room_id", roomId)
+                },
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
 
-        val declineIntent = Intent(this, CallActionReceiver::class.java).apply {
-            action = CallActionReceiver.ACTION_DECLINE
-            putExtra("callId", callId)
-            putExtra("room_id", roomId)
-        }
         val declinePi = PendingIntent.getBroadcast(
-                this, 2, declineIntent,
+                this, 2,
+                Intent(this, CallActionReceiver::class.java).apply {
+                    action = CallActionReceiver.ACTION_DECLINE
+                    putExtra("callId", callId)
+                    putExtra("room_id", roomId)
+                },
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
         )
-
-        // ✅ FIX: CallStyle requires a Person object — this is what triggers the
-        // full-screen lock screen call UI on Android 12+. Without it the system
-        // treats it as a regular notification and suppresses it on the lock screen.
-        val caller = PersonCompat.Builder()
-                .setName(callerName)
-                .setImportant(true)
-                .build()
 
         return NotificationCompat.Builder(this, NotificationUtils.CALL_NOTIFICATION_CHANNEL_ID)
                 .setContentTitle(callerName)
@@ -165,16 +157,12 @@ private fun stopSelfClean() {
                 .setSmallIcon(R.drawable.oz_chat_playstore_icon)
                 .setPriority(NotificationCompat.PRIORITY_MAX)
                 .setCategory(NotificationCompat.CATEGORY_CALL)
-                // ✅ KEY FIX: CallStyle — this is what makes lock screen call UI appear on Android 12+
-                .setStyle(
-                        NotificationCompat.CallStyle.forIncomingCall(caller, declinePi, acceptPi)
-                                .setIsVideo(false)
-                )
                 .setFullScreenIntent(fullScreenPi, true)
                 .setOngoing(true)
                 .setAutoCancel(false)
-                // ✅ Ensure notification is not silenced by DND on Android 13+
-                .setColorized(true)
+                .setOnlyAlertOnce(true)
+                .addAction(R.drawable.ic_call_hangup, "Decline", declinePi)
+                .addAction(R.drawable.ic_call_answer, "Accept", acceptPi)
                 .build()
     }
 
