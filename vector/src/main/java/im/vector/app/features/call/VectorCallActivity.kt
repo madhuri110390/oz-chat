@@ -34,6 +34,7 @@ import android.view.WindowManager
 import android.widget.Toast
 import androidx.activity.result.ActivityResult
 import androidx.annotation.StringRes
+import androidx.core.app.NotificationManagerCompat
 import androidx.core.app.PictureInPictureModeChangedInfo
 import androidx.core.content.ContextCompat
 import androidx.core.content.getSystemService
@@ -77,6 +78,7 @@ import im.vector.app.features.home.room.detail.RoomDetailActivity
 import im.vector.app.features.home.room.detail.arguments.TimelineArgs
 import im.vector.app.features.notifications.CallForegroundService
 import im.vector.app.features.notifications.NotificationDrawerManager
+import im.vector.app.features.notifications.NotificationUtils
 import im.vector.lib.core.utils.compat.getParcelableExtraCompat
 import im.vector.lib.strings.CommonStrings
 import io.github.hyuwah.draggableviewlib.DraggableView
@@ -160,6 +162,7 @@ class VectorCallActivity :
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        NotificationManagerCompat.from(this).cancel(NotificationUtils.CALL_NOTIFICATION_ID)
         WindowCompat.setDecorFitsSystemWindows(window, false)
         val windowInsetsController = WindowInsetsControllerCompat(window, window.decorView)
         windowInsetsController.isAppearanceLightStatusBars = false
@@ -195,10 +198,8 @@ class VectorCallActivity :
         enableImmersiveMode()
         addOnPictureInPictureModeChangedListener(pictureInPictureModeChangedInfoConsumer)
 
+
         val callArgs = intent.getParcelableExtraCompat<CallArgs>(Mavericks.KEY_ARG)
-        if (callArgs?.isIncomingCall == true) {
-            turnScreenOnAndKeyguardOff()
-        }
         val mode = intent.getStringExtra(EXTRA_MODE)
         if (mode == INCOMING_RINGING || mode == null || callArgs?.isIncomingCall == true) {
             turnScreenOnAndKeyguardOff()
@@ -242,6 +243,7 @@ class VectorCallActivity :
         bindToScreenCaptureService()
     }
 
+
 //    override fun onNewIntent(intent: Intent) {
 //        super.onNewIntent(intent)
 //        intent.takeIf { it.hasExtra(Mavericks.KEY_ARG) }
@@ -281,12 +283,15 @@ class VectorCallActivity :
         super.onPause()
         startMicrophoneService()
     }
-
     override fun onResume() {
         super.onResume()
+        // Cancel call notification every time activity comes to foreground
+        // prevents CallStyle heads-up banner showing over the call screen
+        NotificationManagerCompat.from(this).cancel(NotificationUtils.CALL_NOTIFICATION_ID)
         stopMicrophoneService()
         enableImmersiveMode()
     }
+
 
 
         // FIX #4: Detach renderers BEFORE releasing them to prevent
@@ -785,28 +790,26 @@ class VectorCallActivity :
     private fun handleCallEnded(callState: CallState.Ended) {
         if (callEndHandled) return
         callEndHandled = true
-        notificationDrawerManager.clearAllEvents()
-        androidx.core.app.NotificationManagerCompat.from(applicationContext).cancelAll()
         CallForegroundService.stop(applicationContext)
+        NotificationManagerCompat.from(applicationContext).cancel(NotificationUtils.CALL_NOTIFICATION_ID)
+        // REMOVE this line — it clears missed call notifications:
+        // notificationDrawerManager.clearAllEvents()
 
-        // Show toast on caller side when receiver rejects
         val callArgs = intent.getParcelableExtraCompat<CallArgs>(Mavericks.KEY_ARG)
         val isOutgoing = callArgs?.isIncomingCall == false
         val formattedDuration = withState(callViewModel) { it.formattedDuration }
         val callNotAnswered = formattedDuration.isEmpty() || formattedDuration == "00:00"
 
-
-            if (isOutgoing && callNotAnswered) {
-                Toast.makeText(
-                        this,
-                        if (callState.reason == EndCallReason.INVITE_TIMEOUT)
-                            "Call not answered"
-                        else
-                            "Call rejected",
-                        Toast.LENGTH_SHORT
-                ).show()
-            }
-
+        if (isOutgoing && callNotAnswered) {
+            Toast.makeText(
+                    this,
+                    if (callState.reason == EndCallReason.INVITE_TIMEOUT)
+                        "Call not answered"
+                    else
+                        "Call rejected",
+                    Toast.LENGTH_SHORT
+            ).show()
+        }
 
         finishAndRemoveTask()
     }

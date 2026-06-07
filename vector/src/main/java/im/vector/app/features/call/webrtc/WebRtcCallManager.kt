@@ -241,14 +241,12 @@ class WebRtcCallManager @Inject constructor(
             isOutgoing: Boolean,
             opponentMatrixItem: org.matrix.android.sdk.api.util.MatrixItem?
     ) {
-        // Don't show if rejected by receiver or answered elsewhere
-        if (rejected || endCallReason == EndCallReason.ANSWERED_ELSEWHERE) return
+        // Don't show if call was rejected, answered elsewhere, or we were the caller
+        if (rejected) return
+        if (endCallReason == EndCallReason.ANSWERED_ELSEWHERE) return
         if (isOutgoing) return
-        // Add this: don't show missed call if user actively rejected it
-        if (endCallReason == EndCallReason.USER_HANGUP && rejected) return
 
-        // Receiver side only — show missed call notification
-        val callInfo = im.vector.app.core.services.CallAndroidService.CallInformation(
+        val callInfo = CallAndroidService.CallInformation(
                 callId = callId,
                 nativeRoomId = nativeRoomId,
                 opponentUserId = opponentUserId,
@@ -301,6 +299,7 @@ class WebRtcCallManager @Inject constructor(
         CallForegroundService.stop(context)
 
         // Post missed call notification DIRECTLY after short delay
+        // Post missed call notification first
         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
             postMissedCallNotificationIfNeeded(
                     callId = callId,
@@ -312,11 +311,15 @@ class WebRtcCallManager @Inject constructor(
                     isOutgoing = isOutgoing,
                     opponentMatrixItem = opponentMatrixItem
             )
+        }, 500)
+
+// Terminate service AFTER missed call notification is posted
+        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
             CallAndroidService.onCallTerminated(
                     context, callId, endCallReason, rejected,
                     nativeRoomId, opponentUserId, isVideoCall, isOutgoing
             )
-        }, 500)
+        }, 1500)
 
         callsByRoomId[webRtcCall.signalingRoomId]?.remove(webRtcCall)
         callsByRoomId[nativeRoomId]?.remove(webRtcCall)
@@ -502,28 +505,18 @@ class WebRtcCallManager @Inject constructor(
     }
     override fun onCallRejectReceived(callRejectContent: CallRejectContent) {
         Timber.tag(loggerTag.value).v("onCallRejectReceived for call ${callRejectContent.callId}")
-
         val call = callsByCallId[callRejectContent.callId]
                 ?: return Unit.also {
-                    Timber.tag(loggerTag.value).w(
-                            "onCallRejectReceived for non active call? ${callRejectContent.callId}"
-                    )
+                    Timber.tag(loggerTag.value).w("onCallRejectReceived for non active call? ${callRejectContent.callId}")
                 }
-
         call.onCallRejectReceived(callRejectContent)
-
         ringTimeoutScope.launch {
             delay(500)
-
             if (callsByCallId.containsKey(callRejectContent.callId)) {
-                Timber.tag(loggerTag.value).w(
-                        "Force terminating call ${callRejectContent.callId}"
-                )
-
                 onCallEnded(
                         callRejectContent.callId,
                         EndCallReason.USER_HANGUP,
-                        rejected = false
+                        rejected = true  // ← was false, must be true
                 )
             }
         }

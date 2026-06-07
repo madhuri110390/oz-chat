@@ -87,7 +87,8 @@ class CallAndroidService : VectorAndroidService() {
     override fun onDestroy() {
         incomingCallRinger.stop()
         callRingPlayerOutgoing?.stop()
-        notificationManager.cancelAll()
+        // REPLACE cancelAll() with specific cancellation:
+        notificationManager.cancel(NotificationUtils.CALL_NOTIFICATION_ID)
         stopForegroundCompat()
         mediaSession?.release()
         mediaSession = null
@@ -231,8 +232,10 @@ class CallAndroidService : VectorAndroidService() {
     private fun handleCallTerminated(intent: Intent) {
         incomingCallRinger.stop()
         callRingPlayerOutgoing?.stop()
-        NotificationManagerCompat.from(this).cancel(NotificationUtils.CALL_NOTIFICATION_ID)
-        // Force stop CallForegroundService
+        // Cancel notification immediately
+        notificationManager.cancel(NotificationUtils.CALL_NOTIFICATION_ID)
+        NotificationManagerCompat.from(this).cancelAll()
+        // Stop CallForegroundService
         try {
             stopService(Intent(this, CallForegroundService::class.java))
         } catch (e: Exception) { }
@@ -248,7 +251,7 @@ class CallAndroidService : VectorAndroidService() {
         incomingCallRinger.stop()
         callRingPlayerOutgoing?.stop()
         alertManager.cancelAlert(callId)
-        notificationManager.cancel(callId.hashCode())
+
         notificationManager.cancel(NotificationUtils.CALL_NOTIFICATION_ID)
 // Don't cancelAll() — missed call notification posted by WebRtcCallManager
         CallForegroundService.stop(applicationContext)

@@ -96,7 +96,7 @@ class NotificationUtils @Inject constructor(
         private const val FULL_SCREEN_INTENT_REQUEST_CODE = 9001
         private const val DIAGNOSTIC_TAG = "DIAGNOSTIC"
         // Active channel IDs — bump version suffix whenever channel config changes
-        private const val NOISY_NOTIFICATION_CHANNEL_ID = "DEFAULT_NOISY_NOTIFICATION_CHANNEL_ID_V4"
+        private const val NOISY_NOTIFICATION_CHANNEL_ID = "DEFAULT_NOISY_NOTIFICATION_CHANNEL_ID_V5"
         const val SILENT_NOTIFICATION_CHANNEL_ID = "DEFAULT_SILENT_NOTIFICATION_CHANNEL_ID_V5"
         const val CALL_NOTIFICATION_CHANNEL_ID = "CALL_NOTIFICATION_CHANNEL_ID_V6"
         private const val LISTENING_FOR_EVENTS_NOTIFICATION_CHANNEL_ID = "LISTEN_FOR_EVENTS_NOTIFICATION_CHANNEL_ID_V2"
@@ -110,6 +110,7 @@ class NotificationUtils @Inject constructor(
                 "DEFAULT_NOISY_NOTIFICATION_CHANNEL_ID",
                 "DEFAULT_NOISY_NOTIFICATION_CHANNEL_ID_V2",
                 "DEFAULT_NOISY_NOTIFICATION_CHANNEL_ID_V3",
+                "DEFAULT_NOISY_NOTIFICATION_CHANNEL_ID_V4",
                 "DEFAULT_NOISY_NOTIFICATION_CHANNEL_ID_BASE",
                 "CALL_NOTIFICATION_CHANNEL_ID",
                 "CALL_NOTIFICATION_CHANNEL_ID_V2",
@@ -458,12 +459,24 @@ class NotificationUtils @Inject constructor(
                 .setPriority(NotificationCompat.PRIORITY_MAX)
                 .setOngoing(true)
                 .setAutoCancel(false)
-                // KEY FIX: CallStyle triggers full-screen lock screen call UI on Android 12+
-                .setStyle(
-                        NotificationCompat.CallStyle.forIncomingCall(caller, rejectPi, answerPi)
-                                .setIsVideo(call.mxCall.isVideoCall)
-                )
+                .setOnlyAlertOnce(true)
                 .setFullScreenIntent(fullScreenPi, true)
+                // NO CallStyle here — activity is already open, we don't want heads-up buttons
+                .addAction(
+                        NotificationCompat.Action(
+                                IconCompat.createWithResource(context, R.drawable.ic_call_hangup)
+                                        .setTint(ThemeUtils.getColor(context, com.google.android.material.R.attr.colorError)),
+                                stringProvider.getString(CommonStrings.call_notification_reject),
+                                rejectPi
+                        )
+                )
+                .addAction(
+                        NotificationCompat.Action(
+                                R.drawable.ic_call_answer,
+                                stringProvider.getString(CommonStrings.call_notification_answer),
+                                answerPi
+                        )
+                )
                 .build()
     }
 

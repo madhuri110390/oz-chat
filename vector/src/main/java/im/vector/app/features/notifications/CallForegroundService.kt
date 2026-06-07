@@ -59,10 +59,12 @@ class CallForegroundService : Service() {
     }
 
     override fun onDestroy() {
+        incomingCallRinger.stop()
+        NotificationManagerCompat.from(this).cancel(NotificationUtils.CALL_NOTIFICATION_ID)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            stopForeground(STOP_FOREGROUND_DETACH)
+            stopForeground(STOP_FOREGROUND_REMOVE)
         } else {
-            @Suppress("DEPRECATION") stopForeground(false)
+            @Suppress("DEPRECATION") stopForeground(true)
         }
         super.onDestroy()
     }
