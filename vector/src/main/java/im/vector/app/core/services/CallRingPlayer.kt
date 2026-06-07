@@ -40,6 +40,29 @@ class CallRingPlayerIncoming(
     private val RING_CYCLES = 8
     fun start(fromBg: Boolean, customToneUri: Uri? = null) {
         val audioManager = applicationContext.getSystemService<AudioManager>()
+
+        // Request audio focus so ringtone plays even on lock screen
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val focusRequest = android.media.AudioFocusRequest.Builder(
+                    AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE
+            )
+                    .setAudioAttributes(
+                            AudioAttributes.Builder()
+                                    .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                                    .build()
+                    )
+                    .setAcceptsDelayedFocusGain(false)
+                    .build()
+            audioManager?.requestAudioFocus(focusRequest)
+        } else {
+            @Suppress("DEPRECATION")
+            audioManager?.requestAudioFocus(
+                    null, AudioManager.STREAM_RING,
+                    AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE
+            )
+        }
+
         val incomingCallChannel = notificationUtils.getChannelForIncomingCall(fromBg)
         val ringerMode = audioManager?.ringerMode
         if (ringerMode == AudioManager.RINGER_MODE_NORMAL) {
@@ -137,6 +160,10 @@ class CallRingPlayerIncoming(
         ringCyclesPlayed = 0
         vibrator?.cancel()
         vibrator = null
+        // Abandon audio focus
+        val audioManager = applicationContext.getSystemService<AudioManager>()
+        @Suppress("DEPRECATION")
+        audioManager?.abandonAudioFocus(null)
     }
 
 }

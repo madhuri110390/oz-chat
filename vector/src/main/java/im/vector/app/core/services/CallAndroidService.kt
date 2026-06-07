@@ -106,19 +106,33 @@ class CallAndroidService : VectorAndroidService() {
         }
 
         when (intent?.action) {
+
+//            ACTION_INCOMING_RINGING_CALL -> {
+//                mediaSession?.isActive = true
+//                val fromBg = intent.getBooleanExtra(EXTRA_IS_IN_BG, false)
+//                val callId = intent.getStringExtra(EXTRA_CALL_ID)
+//                val customTone = callId
+//                        ?.let { callManager.getCallById(it) }
+//                        ?.nativeRoomId
+//                        ?.let { vectorPreferences.getRoomNotificationTone(it) }
+//                displayIncomingCallNotification(intent)  // become foreground first
+//                incomingCallRinger.start(fromBg, customTone)
+//
+//                // Step 3: stop CallForegroundService LAST — after we are foreground
+//                // Stopping it first cancels CALL_NOTIFICATION_ID before we post ours
+//                CallForegroundService.stop(applicationContext)
+//            }
             ACTION_INCOMING_RINGING_CALL -> {
                 mediaSession?.isActive = true
-                CallForegroundService.stop(applicationContext)  // ← first call — KILLS foreground
-                callManager.audioManager.startRingingAudioMode()
                 val fromBg = intent.getBooleanExtra(EXTRA_IS_IN_BG, false)
                 val callId = intent.getStringExtra(EXTRA_CALL_ID)
                 val customTone = callId
                         ?.let { callManager.getCallById(it) }
                         ?.nativeRoomId
                         ?.let { vectorPreferences.getRoomNotificationTone(it) }
-                incomingCallRinger.start(fromBg, customTone)
                 displayIncomingCallNotification(intent)
-                CallForegroundService.stop(applicationContext)
+                incomingCallRinger.start(fromBg, customTone)
+                // No CallForegroundService.stop() here
             }
             ACTION_OUTGOING_RINGING_CALL -> {
                 mediaSession?.isActive = true
@@ -129,11 +143,9 @@ class CallAndroidService : VectorAndroidService() {
                 incomingCallRinger.stop()
                 callRingPlayerOutgoing?.stop()
                 CallForegroundService.stop(applicationContext)
-                callManager.audioManager.stopRingingAudioMode()
                 displayCallInProgressNotification(intent)
             }
             ACTION_CALL_TERMINATED -> {
-                callManager.audioManager.stopRingingAudioMode()
                 handleCallTerminated(intent)
             }
             else -> {
@@ -219,6 +231,11 @@ class CallAndroidService : VectorAndroidService() {
     private fun handleCallTerminated(intent: Intent) {
         incomingCallRinger.stop()
         callRingPlayerOutgoing?.stop()
+        NotificationManagerCompat.from(this).cancel(NotificationUtils.CALL_NOTIFICATION_ID)
+        // Force stop CallForegroundService
+        try {
+            stopService(Intent(this, CallForegroundService::class.java))
+        } catch (e: Exception) { }
         val callId = intent.getStringExtra(EXTRA_CALL_ID) ?: ""
         val endCallReason = intent.getSerializableExtraCompat<EndCallReason>(EXTRA_END_CALL_REASON)
         val rejected = intent.getBooleanExtra(EXTRA_END_CALL_REJECTED, false)

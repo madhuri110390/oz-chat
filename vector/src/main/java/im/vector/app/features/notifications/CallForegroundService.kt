@@ -23,7 +23,7 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class CallForegroundService : Service() {
 
-
+    @Inject lateinit var incomingCallRinger: IncomingCallRinger
 
     companion object {
         const val ACTION_INCOMING_CALL = "action_incoming_call"
@@ -31,13 +31,21 @@ class CallForegroundService : Service() {
         const val ACTION_STOP = "ACTION_STOP"
         private const val TAG = "CallForegroundService"
 
+//        fun stop(context: Context) {
+//            NotificationManagerCompat.from(context).cancel(NotificationUtils.CALL_NOTIFICATION_ID)
+//            val intent = Intent(context, CallForegroundService::class.java).apply {
+//                action = ACTION_STOP
+//            }
+//            try { context.startService(intent) } catch (e: Exception) { /* already dead */ }
+//        }
+
         fun stop(context: Context) {
-            NotificationManagerCompat.from(context).cancel(NotificationUtils.CALL_NOTIFICATION_ID)
-            val intent = Intent(context, CallForegroundService::class.java).apply {
-                action = ACTION_STOP
-            }
-            try { context.startService(intent) } catch (e: Exception) { /* already dead */ }
+            // Do NOT cancel notification — CallAndroidService reuses same ID
+            try {
+                context.stopService(Intent(context, CallForegroundService::class.java))
+            } catch (e: Exception) { }
         }
+
     }
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
@@ -51,35 +59,36 @@ class CallForegroundService : Service() {
     }
 
     override fun onDestroy() {
-        NotificationManagerCompat.from(this).cancel(NotificationUtils.CALL_NOTIFICATION_ID)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopForeground(STOP_FOREGROUND_DETACH)
         } else {
-            @Suppress("DEPRECATION") stopForeground(true)
+            @Suppress("DEPRECATION") stopForeground(false)
         }
         super.onDestroy()
     }
-    private fun stopSelfClean() {
-        NotificationManagerCompat.from(this).cancel(NotificationUtils.CALL_NOTIFICATION_ID)
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            stopForeground(STOP_FOREGROUND_REMOVE)
-        } else {
-            @Suppress("DEPRECATION") stopForeground(true)
-        }
-        stopSelf()
+//    private fun stopSelfClean() {
+//        NotificationManagerCompat.from(this).cancel(NotificationUtils.CALL_NOTIFICATION_ID)
+//        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+//            stopForeground(STOP_FOREGROUND_REMOVE)
+//        } else {
+//            @Suppress("DEPRECATION") stopForeground(true)
+//        }
+//        stopSelf()
+//    }
+private fun stopSelfClean() {
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+        stopForeground(STOP_FOREGROUND_DETACH)
+    } else {
+        @Suppress("DEPRECATION") stopForeground(false)
     }
-
+    stopSelf()
+}
     private fun handleIncomingCall(intent: Intent) {
         val callId = intent.getStringExtra("callId") ?: return
         val roomId = intent.getStringExtra("room_id") ?: return
         val callerName = intent.getStringExtra("caller_name")
                 ?.takeIf { it.isNotBlank() }
                 ?: getString(CommonStrings.incoming_voice_call)
-
-        // DO NOT start ringer here — CallAndroidService is the sole ringer owner.
-        // Starting it here causes double-ring and resets the 8-cycle counter
-        // when CallAndroidService takes over and restarts it.
-        Timber.tag(TAG).d("showing bridge call notification callId=$callId")
 
         val notification = buildCallNotification(callId, roomId, callerName)
 
@@ -93,7 +102,9 @@ class CallForegroundService : Service() {
             startForeground(NotificationUtils.CALL_NOTIFICATION_ID, notification)
         }
 
-        Timber.tag(TAG).d("lock screen call notification shown")
+        // Start ringer from foreground context — required on Android 12+
+        incomingCallRinger.start(fromBg = true, roomId = roomId)
+        Timber.tag(TAG).d("lock screen call notification shown, ringer started")
     }
 
     private fun buildCallNotification(callId: String, roomId: String, callerName: String): Notification {

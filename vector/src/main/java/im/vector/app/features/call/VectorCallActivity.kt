@@ -142,6 +142,7 @@ class VectorCallActivity :
     // Lifecycle
     // -------------------------------------------------------------------------
 
+    // FIND and REPLACE this entire method:
     override fun doBeforeSetContentView() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O_MR1) {
             setShowWhenLocked(true)
@@ -194,10 +195,12 @@ class VectorCallActivity :
         enableImmersiveMode()
         addOnPictureInPictureModeChangedListener(pictureInPictureModeChangedInfoConsumer)
 
+        val callArgs = intent.getParcelableExtraCompat<CallArgs>(Mavericks.KEY_ARG)
+        if (callArgs?.isIncomingCall == true) {
+            turnScreenOnAndKeyguardOff()
+        }
         val mode = intent.getStringExtra(EXTRA_MODE)
-        if (mode == INCOMING_RINGING || mode == null) {
-            // mode == null means launched from CallForegroundService bridge
-            // (lock screen notification tapped before sync completed)
+        if (mode == INCOMING_RINGING || mode == null || callArgs?.isIncomingCall == true) {
             turnScreenOnAndKeyguardOff()
         }
         if (savedInstanceState != null) {
