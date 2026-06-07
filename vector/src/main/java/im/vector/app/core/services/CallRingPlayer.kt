@@ -145,6 +145,7 @@ class CallRingPlayerIncoming(
         }
     }
 
+    // FIXED — always releases even if stop() throws
     fun stop() {
         ringPlayer?.release()
         ringPlayer = null
@@ -187,8 +188,15 @@ class CallRingPlayerOutgoing(
     }
 
     fun stop() {
-        mediaPlayer?.stop()
-        mediaPlayer?.release()
+        mediaPlayer?.let { player ->
+            try {
+                if (player.isPlaying) player.stop()
+            } catch (e: IllegalStateException) {
+                Timber.w(e, "MediaPlayer stop() in invalid state")
+            } finally {
+                player.release()
+            }
+        }
         mediaPlayer = null
     }
 }

@@ -128,7 +128,7 @@ class CallAndroidService : VectorAndroidService() {
             ACTION_ONGOING_CALL -> {
                 callManager.audioManager.stopRingingAudioMode()
                 incomingCallRinger.stop()
-               // callRingPlayerOutgoing?.stop()
+                callRingPlayerOutgoing?.stop()
                 CallForegroundService.stop(applicationContext)
                 displayCallInProgressNotification(intent)
             }
