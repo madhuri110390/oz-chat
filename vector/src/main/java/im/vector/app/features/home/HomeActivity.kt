@@ -358,6 +358,8 @@ private val fullScreenIntentSettingsLauncher = registerForActivityResult(
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        requestIgnoreBatteryOptimizations()
+        showOemBatteryGuideIfNeeded()
         isNewAppLayoutEnabled = vectorPreferences.isNewAppLayoutEnabled()
         analyticsScreenName = MobileScreen.ScreenName.Home
         supportFragmentManager.registerFragmentLifecycleCallbacks(fragmentLifecycleCallbacks, false)
@@ -713,8 +715,93 @@ private fun checkFullScreenIntent() {
         }
     }
 
+    private fun requestIgnoreBatteryOptimizations() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            val pm = getSystemService(Context.POWER_SERVICE) as android.os.PowerManager
+            if (!pm.isIgnoringBatteryOptimizations(packageName)) {
+                try {
+                    startActivity(
+                            Intent(
+                                    android.provider.Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS,
+                                    android.net.Uri.parse("package:$packageName")
+                            )
+                    )
+                } catch (e: Exception) {
+                    Timber.e(e, "Failed to request battery optimization exemption")
+                }
+            }
+        }
+        // Remove ALL manufacturer-specific autostart intents from here
+        // They are already handled by the existing permission flow
+    }
+    private fun showOemBatteryGuideIfNeeded() {
+        val prefs = getSharedPreferences("app_prefs", Context.MODE_PRIVATE)
+        if (prefs.getBoolean("oem_battery_guide_shown", false)) return
+        prefs.edit().putBoolean("oem_battery_guide_shown", true).apply()
 
+        val manufacturer = Build.MANUFACTURER.lowercase()
+        val (message, intent) = when {
+            manufacturer.contains("samsung") -> Pair(
+                    "To receive calls when screen is off:\n\nSettings → Apps → OZ Chat → Battery → Unrestricted\n\nAlso: Settings → Battery → Background usage limits → remove OZ Chat from sleeping apps.",
+                    Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            android.net.Uri.parse("package:$packageName"))
+            )
+            manufacturer.contains("xiaomi") || manufacturer.contains("redmi") || manufacturer.contains("poco") -> Pair(
+                    "To receive calls when screen is off:\n\n1. Settings → Apps → OZ Chat → Battery saver → No restrictions\n2. Security app → Manage apps → OZ Chat → Autostart → Enable",
+                    Intent().apply {
+                        component = android.content.ComponentName(
+                                "com.miui.securitycenter",
+                                "com.miui.permcenter.autostart.AutoStartManagementActivity"
+                        )
+                    }
+            )
+            manufacturer.contains("huawei") || manufacturer.contains("honor") -> Pair(
+                    "To receive calls when screen is off:\n\nPhone Manager → App launch → OZ Chat → Manage manually → Enable Auto-launch, Secondary launch, and Run in background.",
+                    Intent().apply {
+                        component = android.content.ComponentName(
+                                "com.huawei.systemmanager",
+                                "com.huawei.systemmanager.startupmgr.ui.StartupNormalAppListActivity"
+                        )
+                    }
+            )
+            manufacturer.contains("oppo") || manufacturer.contains("realme") || manufacturer.contains("oneplus") -> Pair(
+                    "To receive calls when screen is off:\n\nSettings → Apps → OZ Chat → Battery → Allow background activity\n\nAlso enable Auto-start in Security settings.",
+                    Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            android.net.Uri.parse("package:$packageName"))
+            )
+            manufacturer.contains("vivo") -> Pair(
+                    "To receive calls when screen is off:\n\niManager → App Manager → OZ Chat → Background pop-up permission → Allow\nAlso enable Autostart.",
+                    Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            android.net.Uri.parse("package:$packageName"))
+            )
+            else -> Pair(
+                    "To receive calls when screen is off:\n\nSettings → Apps → OZ Chat → Battery → Unrestricted\n\nThis ensures you never miss a call.",
+                    Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                            android.net.Uri.parse("package:$packageName"))
+            )
+        }
 
+        MaterialAlertDialogBuilder(this)
+                .setTitle("Enable Incoming Calls")
+                .setMessage(message)
+                .setCancelable(false)
+                .setPositiveButton("Open Settings") { _, _ ->
+                    try {
+                        startActivity(intent)
+                    } catch (e: Exception) {
+                        try {
+                            startActivity(
+                                    Intent(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                                            android.net.Uri.parse("package:$packageName"))
+                            )
+                        } catch (ex: Exception) {
+                            Timber.e(ex, "Failed to open settings")
+                        }
+                    }
+                }
+                .setNegativeButton("Later", null)
+                .show()
+    }
     private fun checkAppNotificationSettings() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
             val notificationManager = NotificationManagerCompat.from(this)
