@@ -108,9 +108,9 @@ class CallAndroidService : VectorAndroidService() {
         when (intent?.action) {
             ACTION_INCOMING_RINGING_CALL -> {
                 mediaSession?.isActive = true
-                // Stop CallForegroundService first — it was started by FCM push
-                // and is already ringing. We take over ring management here.
                 CallForegroundService.stop(applicationContext)
+                // Fix: set ringtone audio mode so earpiece is used, not speaker
+                callManager.audioManager.startRingingAudioMode()
                 val fromBg = intent.getBooleanExtra(EXTRA_IS_IN_BG, false)
                 val callId = intent.getStringExtra(EXTRA_CALL_ID)
                 val customTone = callId
@@ -126,12 +126,14 @@ class CallAndroidService : VectorAndroidService() {
                 displayOutgoingRingingCallNotification(intent)
             }
             ACTION_ONGOING_CALL -> {
+                callManager.audioManager.stopRingingAudioMode()
                 incomingCallRinger.stop()
                // callRingPlayerOutgoing?.stop()
                 CallForegroundService.stop(applicationContext)
                 displayCallInProgressNotification(intent)
             }
             ACTION_CALL_TERMINATED -> {
+                callManager.audioManager.stopRingingAudioMode()
                 handleCallTerminated(intent)
             }
             else -> {

@@ -8,6 +8,7 @@ package im.vector.app.push.fcm
 
 import android.content.Context
 import android.content.SharedPreferences
+import android.os.Build
 import android.widget.Toast
 import androidx.core.content.edit
 import com.google.android.gms.common.ConnectionResult
@@ -138,7 +139,23 @@ class GoogleFcmHelper @Inject constructor(
             Timber.e("No valid Google Play Services found. Cannot use FCM.")
         }
     }
+// Add inside GoogleFcmHelper or a separate PermissionHelper
 
+    fun checkFullScreenIntentPermission(context: Context): Boolean {
+        if (Build.VERSION.SDK_INT >= 34) {
+            val nm = context.getSystemService(Context.NOTIFICATION_SERVICE)
+                    as android.app.NotificationManager
+            val canUse = nm.canUseFullScreenIntent()
+            Timber.d("USE_FULL_SCREEN_INTENT permission granted=$canUse")
+            if (!canUse) {
+                // On Android 14, must redirect user to settings
+                // Intent: Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT
+                Timber.w("Full screen intent not permitted — call notification will NOT show on lock screen")
+            }
+            return canUse
+        }
+        return true
+    }
     /**
      * Check the device to make sure it has the Google Play Services APK. If
      * it doesn't, display a dialog that allows users to download the APK from

@@ -194,7 +194,10 @@ class VectorCallActivity :
         enableImmersiveMode()
         addOnPictureInPictureModeChangedListener(pictureInPictureModeChangedInfoConsumer)
 
-        if (intent.getStringExtra(EXTRA_MODE) == INCOMING_RINGING) {
+        val mode = intent.getStringExtra(EXTRA_MODE)
+        if (mode == INCOMING_RINGING || mode == null) {
+            // mode == null means launched from CallForegroundService bridge
+            // (lock screen notification tapped before sync completed)
             turnScreenOnAndKeyguardOff()
         }
         if (savedInstanceState != null) {
@@ -287,6 +290,9 @@ class VectorCallActivity :
         // "SurfaceViewRenderer already released" crash after long calls.
         // detachRenderersIfNeeded() guards with surfaceRenderersAreInitialized flag.
         override fun onDestroy() {
+            toneGenerator?.stopTone()
+            toneGenerator?.release()
+            toneGenerator = null
             withState(callViewModel) { state ->
                 if (state.callState.invoke() is CallState.LocalRinging) {
                     callViewModel.handle(VectorCallViewActions.DeclineCall)
@@ -477,6 +483,7 @@ class VectorCallActivity :
         views.reconnectingIndicator.isVisible = false
 
         when (callState) {
+            // REPLACE the entire Dialing/LocalRinging block in renderFullScreenMode:
             is CallState.Idle,
             is CallState.CreateOffer,
             is CallState.LocalRinging,
@@ -484,24 +491,29 @@ class VectorCallActivity :
                 showAvatarLayout(state)
                 hideVideoLayout()
                 toolbar?.setSubtitle(CommonStrings.call_ringing)
-
                 if (toneGenerator == null) {
-                    toneGenerator = ToneGenerator(
-                            AudioManager.STREAM_VOICE_CALL,
-                            80
-                    )
+                    toneGenerator = ToneGenerator(AudioManager.STREAM_VOICE_CALL, 80)
+                    toneGenerator?.startTone(ToneGenerator.TONE_SUP_RINGTONE)
                 }
-
-                toneGenerator?.startTone(ToneGenerator.TONE_SUP_RINGTONE)
             }
 
+// ADD this inside the CallState.Answering block:
             is CallState.Answering -> {
+                // Stop dialing tone immediately when call is answered
+                toneGenerator?.stopTone()
+                toneGenerator?.release()
+                toneGenerator = null
                 showAvatarLayout(state)
                 hideVideoLayout()
                 toolbar?.setSubtitle(CommonStrings.call_connecting)
             }
 
+// ADD this inside CallState.Connected block, at the very top:
             is CallState.Connected -> {
+                // Stop dialing tone if still playing (safety net)
+                toneGenerator?.stopTone()
+                toneGenerator?.release()
+                toneGenerator = null
                 val isReconnecting = callState.iceConnectionState != MxPeerConnectionState.CONNECTED
                 views.reconnectingIndicator.isVisible = isReconnecting
                 toolbar?.subtitle = state.formattedDuration

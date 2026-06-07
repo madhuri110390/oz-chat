@@ -88,7 +88,7 @@ class VectorFirebaseMessagingService : FirebaseMessagingService() {
             }
         }
 
-        // These must be declared AFTER isCallPush is resolved
+        // Declare AFTER isCallPush is fully resolved
         val callId = FcmPushPayloadHelper.extractCallId(data)
         val roomId = data["room_id"]
 
@@ -98,8 +98,6 @@ class VectorFirebaseMessagingService : FirebaseMessagingService() {
                 .lifecycle.currentState
                 .isAtLeast(Lifecycle.State.STARTED)
 
-        // Suppress non-call notifications when a call is active
-        // AFTER:
         val hasActiveCall = webRtcCallManager.getCalls().isNotEmpty()
         val callRecentlyActiveInRoom = roomId != null &&
                 webRtcCallManager.wasCallRecentlyActiveInRoom(roomId)
@@ -119,17 +117,16 @@ class VectorFirebaseMessagingService : FirebaseMessagingService() {
             val placeholderTag = "PENDING_${message.messageId ?: System.currentTimeMillis()}"
 
             if (isCallPush) {
-                // Cancel any stale call notifications before showing new one
                 notificationUtils.cancelNotificationMessage(null, NotificationUtils.CALL_NOTIFICATION_ID)
-                notificationUtils.cancelAllNotifications()
-                incomingCallRinger.start(fromBg = true, roomId = roomId)
-                Timber.tag(loggerTag.value).d("incoming call ring started")
+                // Ringer is owned by CallAndroidService — not started here
             }
 
             showGenericNotificationFromFcm(message, placeholderTag, callId, isCallPush)
 
+            // callId and roomId are declared above — no unresolved reference
             if (isCallPush && callId != null && roomId != null) {
-                startCallForegroundService(callId, roomId)
+                val callerName = data["sender_display_name"] ?: data["room_name"] ?: ""
+                startCallForegroundService(callId, roomId, callerName)
             }
         }
 
@@ -166,15 +163,16 @@ class VectorFirebaseMessagingService : FirebaseMessagingService() {
         )
     }
 
-    private fun startCallForegroundService(callId: String, roomId: String) {
+    private fun startCallForegroundService(callId: String, roomId: String, callerName: String = "") {
         try {
             val intent = Intent(this, CallForegroundService::class.java).apply {
                 action = CallForegroundService.ACTION_INCOMING_CALL
                 putExtra("callId", callId)
                 putExtra("room_id", roomId)
+                putExtra("caller_name", callerName)  // ← add this
             }
             ContextCompat.startForegroundService(this, intent)
-            Timber.tag(loggerTag.value).d("lock screen call notification shown (foreground service)")
+            Timber.tag(loggerTag.value).d("CallForegroundService started callId=$callId")
         } catch (e: Exception) {
             Timber.tag(loggerTag.value).e(e, "Failed to start CallForegroundService")
         }

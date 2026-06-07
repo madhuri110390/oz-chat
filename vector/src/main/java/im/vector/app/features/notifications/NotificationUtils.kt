@@ -400,8 +400,6 @@ class NotificationUtils @Inject constructor(
             fromBg: Boolean,
             avatarBitmap: Bitmap? = null,
     ): Notification {
-        val accentColor = ContextCompat.getColor(context, im.vector.lib.ui.styles.R.color.notification_accent_color)
-
         val contentIntent = VectorCallActivity.newIntent(
                 context = context,
                 call = call,
@@ -411,80 +409,61 @@ class NotificationUtils @Inject constructor(
                     Intent.FLAG_ACTIVITY_NEW_TASK
             data = createIgnoredUri(call.callId)
         }
-        val contentPendingIntent = PendingIntent.getActivity(
+        val fullScreenPi = PendingIntent.getActivity(
                 context,
                 clock.epochMillis().toInt(),
                 contentIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntentCompat.FLAG_IMMUTABLE
         )
 
-        val answerPendingIntent = TaskStackBuilder.create(context)
+        val answerPi = TaskStackBuilder.create(context)
                 .addNextIntentWithParentStack(HomeActivity.newIntent(context, firstStartMainActivity = false))
                 .addNextIntent(VectorCallActivity.newIntent(context, call, VectorCallActivity.INCOMING_ACCEPT))
                 .getPendingIntent(
                         clock.epochMillis().toInt() + 1,
                         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntentCompat.FLAG_IMMUTABLE
-                )
+                ) ?: PendingIntent.getActivity(
+                context,
+                clock.epochMillis().toInt() + 1,
+                VectorCallActivity.newIntent(context, call, VectorCallActivity.INCOMING_ACCEPT),
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntentCompat.FLAG_IMMUTABLE
+        )
+        val rejectPi = buildRejectCallPendingIntent(call.callId)
 
-        val roomId = call.nativeRoomId
-//        val customTone = vectorPreferences.getRoomNotificationTone(roomId)
-//        val channelId = if (customTone != null) {
-//            getOrCreateRoomChannel(
-//                    context, roomId, title, customTone,
-//                    isCall = true
-//            )
-//        } else {
-//            CALL_NOTIFICATION_CHANNEL_ID
-//        }
-//        if (customTone != null) {
-//            startCallRingtone(customTone)
-//        }
-        val customTone = vectorPreferences.getRoomNotificationTone(roomId)
-        val channelId = if (customTone != null) {
-            // Per-room channel for call (silent: ringing handled by CallRingPlayerIncoming)
-            getOrCreateRoomChannel(context, roomId, title, customTone, isCall = true)
-        } else {
-            CALL_NOTIFICATION_CHANNEL_ID
-        }
-        // NOTE: ringtone playback (custom or default) is performed exclusively by
-        // CallRingPlayerIncoming.start(...). Do not also play it here, or via the
-        // channel sound, to avoid two ringtones playing simultaneously.
+        // CallStyle: mandatory for lock screen call UI on Android 12+
+        // Without this the system treats it as a regular notification and
+        // suppresses the full-screen call UI on every OEM lock screen.
+        val caller = androidx.core.app.Person.Builder()
+                .setName(title.ifBlank { "Incoming call" })
+                .apply { if (avatarBitmap != null) setIcon(IconCompat.createWithBitmap(avatarBitmap)) }
+                .setImportant(true)
+                .build()
+
+        val channelId = vectorPreferences.getRoomNotificationTone(call.nativeRoomId)?.let {
+            getOrCreateRoomChannel(context, call.nativeRoomId, title, it, isCall = true)
+        } ?: CALL_NOTIFICATION_CHANNEL_ID
 
         return NotificationCompat.Builder(context, channelId)
-                .setContentTitle(ensureTitleNotEmpty(title))  // title IS the caller name — already correct
-                .apply {
-                    if (call.mxCall.isVideoCall) {
-                        setContentText(stringProvider.getString(CommonStrings.incoming_video_call))
-                    } else {
-                        setContentText(stringProvider.getString(CommonStrings.incoming_voice_call))
-                    }
-                    setSmallIcon(R.drawable.oz_chat_playstore_icon)  // always use app icon
-                }
-                .setLargeIcon(
-                        BitmapFactory.decodeResource(context.resources, R.drawable.oz_chat_playstore_icon)
+                .setContentTitle(title.ifBlank { "Incoming call" })
+                .setContentText(
+                        if (call.mxCall.isVideoCall)
+                            stringProvider.getString(CommonStrings.incoming_video_call)
+                        else
+                            stringProvider.getString(CommonStrings.incoming_voice_call)
                 )
+                .setSmallIcon(R.drawable.oz_chat_playstore_icon)
+                .setLargeIcon(avatarBitmap)
                 .setCategory(NotificationCompat.CATEGORY_CALL)
                 .setVisibility(NotificationCompat.VISIBILITY_PUBLIC)
-                .setColor(ThemeUtils.getColor(context, android.R.attr.colorPrimary))
-                .setLights(accentColor, 500, 500)
-                .setOngoing(true)
                 .setPriority(NotificationCompat.PRIORITY_MAX)
-                .setFullScreenIntent(contentPendingIntent, true)
-                .addAction(
-                        NotificationCompat.Action(
-                                IconCompat.createWithResource(context, R.drawable.ic_call_hangup)
-                                        .setTint(ThemeUtils.getColor(context, com.google.android.material.R.attr.colorError)),
-                                getActionText(CommonStrings.call_notification_reject, com.google.android.material.R.attr.colorError),
-                                buildRejectCallPendingIntent(call.callId)
-                        )
+                .setOngoing(true)
+                .setAutoCancel(false)
+                // KEY FIX: CallStyle triggers full-screen lock screen call UI on Android 12+
+                .setStyle(
+                        NotificationCompat.CallStyle.forIncomingCall(caller, rejectPi, answerPi)
+                                .setIsVideo(call.mxCall.isVideoCall)
                 )
-                .addAction(
-                        NotificationCompat.Action(
-                                R.drawable.ic_call_answer,
-                                getActionText(CommonStrings.call_notification_answer, com.google.android.material.R.attr.colorPrimary),
-                                answerPendingIntent
-                        )
-                )
+                .setFullScreenIntent(fullScreenPi, true)
                 .build()
     }
 

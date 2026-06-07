@@ -50,6 +50,7 @@ class CallAudioManager(private val context: Context, val configChange: (() -> Un
     init {
         runInAudioThread { setup() }
     }
+    // Add to CallAudioManager.kt
 
     private fun setup() {
         if (audioManager == null) {
@@ -247,7 +248,23 @@ class CallAudioManager(private val context: Context, val configChange: (() -> Un
          */
         fun setMode(mode: Mode): Boolean
     }
+    fun startRingingAudioMode() {
+        runInAudioThread {
+            @Suppress("WrongConstant")
+            audioManager?.mode = AudioManager.MODE_RINGTONE
+            Timber.i("Audio mode set to RINGTONE for incoming call")
+        }
+    }
 
+    fun stopRingingAudioMode() {
+        runInAudioThread {
+            if (mode == Mode.DEFAULT) {
+                @Suppress("WrongConstant")
+                audioManager?.mode = AudioManager.MODE_NORMAL
+                Timber.i("Audio mode restored to NORMAL")
+            }
+        }
+    }
     companion object {
         // Every audio operations should be launched on single thread
         private val executor = Executors.newSingleThreadExecutor()

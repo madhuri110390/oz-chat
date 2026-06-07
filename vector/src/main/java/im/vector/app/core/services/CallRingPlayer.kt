@@ -38,9 +38,29 @@ class CallRingPlayerIncoming(
 
     private val VIBRATE_PATTERN = longArrayOf(0, 400, 600)
     private val RING_CYCLES = 8
-
     fun start(fromBg: Boolean, customToneUri: Uri? = null) {
         val audioManager = applicationContext.getSystemService<AudioManager>()
+
+        // Request audio focus FIRST — without this, STREAM_RING is silenced
+        // on many devices when the app is killed/backgrounded
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            val focusRequest = android.media.AudioFocusRequest.Builder(
+                    AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE
+            )
+                    .setAudioAttributes(
+                            AudioAttributes.Builder()
+                                    .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                                    .build()
+                    )
+                    .setAcceptsDelayedFocusGain(false)
+                    .build()
+            audioManager?.requestAudioFocus(focusRequest)
+        } else {
+            @Suppress("DEPRECATION")
+            audioManager?.requestAudioFocus(null, AudioManager.STREAM_RING, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE)
+        }
+
         val incomingCallChannel = notificationUtils.getChannelForIncomingCall(fromBg)
         val ringerMode = audioManager?.ringerMode
         if (ringerMode == AudioManager.RINGER_MODE_NORMAL) {
@@ -66,20 +86,19 @@ class CallRingPlayerIncoming(
         ringPlayer = player
 
         try {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-                player.setAudioAttributes(
-                        AudioAttributes.Builder()
-                                .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
-                                .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                                .build()
-                )
-            } else {
-                @Suppress("DEPRECATION")
-                player.setAudioStreamType(AudioManager.STREAM_RING)
-            }
+            // Use USAGE_NOTIFICATION_RINGTONE so the system routes through
+            // STREAM_RING and respects the ringer volume, not media volume
+            player.setAudioAttributes(
+                    AudioAttributes.Builder()
+                            .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
+                            .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
+                            .setLegacyStreamType(AudioManager.STREAM_RING)
+                            .build()
+            )
 
             player.setDataSource(applicationContext, ringtoneUri)
             player.isLooping = false
+            player.setOnPreparedListener { it.start() }
             player.setOnCompletionListener {
                 val current = ringPlayer ?: return@setOnCompletionListener
                 ringCyclesPlayed += 1
@@ -102,9 +121,8 @@ class CallRingPlayerIncoming(
                 false
             }
 
-            player.prepare()
-            Timber.v("Play ringtone for incoming call (app-managed $RING_CYCLES cycles)")
-            player.start()
+            player.prepareAsync()   // prepareAsync → onPreparedListener → start()
+            Timber.v("Preparing ringtone for incoming call ($RING_CYCLES cycles)")
         } catch (failure: Throwable) {
             Timber.e(failure, "Failed to start incoming ringtone")
             stop()
@@ -133,6 +151,10 @@ class CallRingPlayerIncoming(
         ringCyclesPlayed = 0
         vibrator?.cancel()
         vibrator = null
+        // Abandon audio focus so earpiece/speaker routes back to normal after call
+        val audioManager = applicationContext.getSystemService<AudioManager>()
+        @Suppress("DEPRECATION")
+        audioManager?.abandonAudioFocus(null)
     }
 }
 

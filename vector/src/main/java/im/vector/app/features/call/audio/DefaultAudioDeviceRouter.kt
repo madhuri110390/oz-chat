@@ -29,26 +29,29 @@ class DefaultAudioDeviceRouter(
 //        audioManager.isSpeakerphoneOn = device is CallAudioManager.Device.Speaker
 //        setBluetoothAudioRoute(device is CallAudioManager.Device.WirelessHeadset)
 //    }
+@SuppressLint("WrongConstant")
 override fun setAudioRoute(device: CallAudioManager.Device) {
-
+    // Always set MODE_IN_COMMUNICATION when a route is active
     audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
     audioManager.isMicrophoneMute = false
 
     when (device) {
-
         is CallAudioManager.Device.WirelessHeadset -> {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                @Suppress("DEPRECATION")
+                audioManager.isSpeakerphoneOn = false
+            } else {
+                @Suppress("DEPRECATION")
+                audioManager.isSpeakerphoneOn = false
+            }
             setBluetoothAudioRoute(true)
         }
 
         is CallAudioManager.Device.Speaker -> {
-
             setBluetoothAudioRoute(false)
-
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 audioManager.availableCommunicationDevices
-                        .firstOrNull {
-                            it.type == android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER
-                        }
+                        .firstOrNull { it.type == android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
                         ?.let { audioManager.setCommunicationDevice(it) }
             } else {
                 @Suppress("DEPRECATION")
@@ -57,14 +60,12 @@ override fun setAudioRoute(device: CallAudioManager.Device) {
         }
 
         else -> {
-
+            // Phone / Headset — route to earpiece, explicitly disable speaker
             setBluetoothAudioRoute(false)
-
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                audioManager.clearCommunicationDevice()
                 audioManager.availableCommunicationDevices
-                        .firstOrNull {
-                            it.type == android.media.AudioDeviceInfo.TYPE_BUILTIN_EARPIECE
-                        }
+                        .firstOrNull { it.type == android.media.AudioDeviceInfo.TYPE_BUILTIN_EARPIECE }
                         ?.let { audioManager.setCommunicationDevice(it) }
             } else {
                 @Suppress("DEPRECATION")
@@ -73,6 +74,7 @@ override fun setAudioRoute(device: CallAudioManager.Device) {
         }
     }
 }
+
 
     @SuppressLint("WrongConstant")
     override fun setMode(mode: CallAudioManager.Mode): Boolean {
@@ -88,7 +90,9 @@ override fun setAudioRoute(device: CallAudioManager.Device) {
             setBluetoothAudioRoute(false)
             return true
         }
-        audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
+
+        // Do NOT set MODE_IN_COMMUNICATION here — setAudioRoute() owns audio mode
+        // Setting it here before route is selected causes speaker to activate on OEMs
         audioManager.isMicrophoneMute = false
 
         val audioFocusRequest = AudioFocusRequestCompat.Builder(AudioManagerCompat.AUDIOFOCUS_GAIN)
@@ -100,13 +104,11 @@ override fun setAudioRoute(device: CallAudioManager.Device) {
                 )
                 .setOnAudioFocusChangeListener(this)
                 .build()
-                .also {
-                    focusRequestCompat = it
-                }
+                .also { focusRequestCompat = it }
 
         val gotFocus = AudioManagerCompat.requestAudioFocus(audioManager, audioFocusRequest)
         if (gotFocus == AudioManager.AUDIOFOCUS_REQUEST_FAILED) {
-            Timber.w(" Audio focus request failed")
+            Timber.w("Audio focus request failed")
             return false
         }
         return true
