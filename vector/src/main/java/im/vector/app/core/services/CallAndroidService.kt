@@ -119,6 +119,7 @@ class CallAndroidService : VectorAndroidService() {
                         ?.let { vectorPreferences.getRoomNotificationTone(it) }
                 incomingCallRinger.start(fromBg, customTone)
                 displayIncomingCallNotification(intent)
+                CallForegroundService.stop(applicationContext)
             }
             ACTION_OUTGOING_RINGING_CALL -> {
                 mediaSession?.isActive = true
@@ -126,10 +127,10 @@ class CallAndroidService : VectorAndroidService() {
                 displayOutgoingRingingCallNotification(intent)
             }
             ACTION_ONGOING_CALL -> {
-                callManager.audioManager.stopRingingAudioMode()
                 incomingCallRinger.stop()
                 callRingPlayerOutgoing?.stop()
                 CallForegroundService.stop(applicationContext)
+                callManager.audioManager.stopRingingAudioMode()
                 displayCallInProgressNotification(intent)
             }
             ACTION_CALL_TERMINATED -> {
@@ -207,16 +208,18 @@ class CallAndroidService : VectorAndroidService() {
                 avatarBitmap = avatarBitmap
         )
         if (knownCalls.isEmpty()) {
-            startForegroundCompat(callId.hashCode(), notification) {
+            startForegroundCompat(NotificationUtils.CALL_NOTIFICATION_ID, notification) {
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL
             }
         } else {
-            notificationManager.notify(callId.hashCode(), notification)
+            notificationManager.notify(NotificationUtils.CALL_NOTIFICATION_ID, notification)
         }
         knownCalls[callId] = callInformation
     }
 
     private fun handleCallTerminated(intent: Intent) {
+        incomingCallRinger.stop()
+        callRingPlayerOutgoing?.stop()
         val callId = intent.getStringExtra(EXTRA_CALL_ID) ?: ""
         val endCallReason = intent.getSerializableExtraCompat<EndCallReason>(EXTRA_END_CALL_REASON)
         val rejected = intent.getBooleanExtra(EXTRA_END_CALL_REJECTED, false)

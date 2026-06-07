@@ -71,8 +71,11 @@ class CallRingPlayerIncoming(
     }
 
     private fun playRingtoneIfNeeded(incomingCallChannel: NotificationChannel?, customToneUri: Uri?) {
-        ringPlayer?.release()
-        ringPlayer = null
+        // Guard: if already playing, don't restart and lose cycle count
+        if (ringPlayer != null) {
+            Timber.v("Ringtone already playing — skipping restart")
+            return
+        }
         ringCyclesPlayed = 0
 
         val ringtoneUri = customToneUri
@@ -86,8 +89,6 @@ class CallRingPlayerIncoming(
         ringPlayer = player
 
         try {
-            // Use USAGE_NOTIFICATION_RINGTONE so the system routes through
-            // STREAM_RING and respects the ringer volume, not media volume
             player.setAudioAttributes(
                     AudioAttributes.Builder()
                             .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
@@ -95,7 +96,6 @@ class CallRingPlayerIncoming(
                             .setLegacyStreamType(AudioManager.STREAM_RING)
                             .build()
             )
-
             player.setDataSource(applicationContext, ringtoneUri)
             player.isLooping = false
             player.setOnPreparedListener { it.start() }
@@ -120,8 +120,7 @@ class CallRingPlayerIncoming(
                 stop()
                 false
             }
-
-            player.prepareAsync()   // prepareAsync → onPreparedListener → start()
+            player.prepareAsync()
             Timber.v("Preparing ringtone for incoming call ($RING_CYCLES cycles)")
         } catch (failure: Throwable) {
             Timber.e(failure, "Failed to start incoming ringtone")
@@ -149,14 +148,14 @@ class CallRingPlayerIncoming(
     fun stop() {
         ringPlayer?.release()
         ringPlayer = null
-        ringCyclesPlayed = 0
+        ringCyclesPlayed = 0  // only reset here — start() must NOT reset this
         vibrator?.cancel()
         vibrator = null
-        // Abandon audio focus so earpiece/speaker routes back to normal after call
         val audioManager = applicationContext.getSystemService<AudioManager>()
         @Suppress("DEPRECATION")
         audioManager?.abandonAudioFocus(null)
     }
+
 }
 
 class CallRingPlayerOutgoing(

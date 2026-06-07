@@ -13,6 +13,7 @@ import androidx.lifecycle.LifecycleOwner
 import im.vector.app.ActiveSessionDataSource
 import im.vector.app.core.pushers.UnifiedPushHelper
 import im.vector.app.core.services.CallAndroidService
+import im.vector.app.core.services.IncomingCallRinger
 import im.vector.app.features.analytics.AnalyticsTracker
 import im.vector.app.features.analytics.plan.CallEnded
 import im.vector.app.features.analytics.plan.CallStarted
@@ -68,6 +69,7 @@ class WebRtcCallManager @Inject constructor(
         private val unifiedPushHelper: UnifiedPushHelper,
         private val voipConfig: VoipConfig,
         private val notificationUtils: im.vector.app.features.notifications.NotificationUtils,
+        private val incomingCallRinger: IncomingCallRinger,
 ) : CallListener,
         DefaultLifecycleObserver {
 
@@ -279,6 +281,8 @@ class WebRtcCallManager @Inject constructor(
         val webRtcCall = callsByCallId.remove(callId) ?: return Unit.also {
             Timber.tag(loggerTag.value).v("On call ended for unknown call $callId")
         }
+        CallForegroundService.stop(context)
+        incomingCallRinger.stop()
         // Capture opponent info BEFORE anything else — session/call may be gone by the time
         // the delayed handler runs
         val opponentMatrixItem = webRtcCall.getOpponentAsMatrixItem(currentSession)

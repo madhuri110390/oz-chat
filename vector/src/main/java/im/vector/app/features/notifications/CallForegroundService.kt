@@ -23,7 +23,7 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class CallForegroundService : Service() {
 
-    @Inject lateinit var incomingCallRinger: IncomingCallRinger
+
 
     companion object {
         const val ACTION_INCOMING_CALL = "action_incoming_call"
@@ -39,12 +39,11 @@ class CallForegroundService : Service() {
             try { context.startService(intent) } catch (e: Exception) { /* already dead */ }
         }
     }
-
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
         when (intent?.action) {
             ACTION_INCOMING_CALL -> handleIncomingCall(intent)
             ACTION_STOP, ACTION_END_CALL -> {
-                stopRingerAndSelf()
+                stopSelfClean()
                 return START_NOT_STICKY
             }
         }
@@ -52,7 +51,6 @@ class CallForegroundService : Service() {
     }
 
     override fun onDestroy() {
-        incomingCallRinger.stop()
         NotificationManagerCompat.from(this).cancel(NotificationUtils.CALL_NOTIFICATION_ID)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             stopForeground(STOP_FOREGROUND_REMOVE)
@@ -61,9 +59,7 @@ class CallForegroundService : Service() {
         }
         super.onDestroy()
     }
-
-    private fun stopRingerAndSelf() {
-        incomingCallRinger.stop()
+    private fun stopSelfClean() {
         NotificationManagerCompat.from(this).cancel(NotificationUtils.CALL_NOTIFICATION_ID)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
             stopForeground(STOP_FOREGROUND_REMOVE)
@@ -74,14 +70,16 @@ class CallForegroundService : Service() {
     }
 
     private fun handleIncomingCall(intent: Intent) {
-        val callId  = intent.getStringExtra("callId")  ?: return
-        val roomId  = intent.getStringExtra("room_id") ?: return
-        val callerName = intent.getStringExtra("caller_name") ?: getString(CommonStrings.incoming_voice_call)
+        val callId = intent.getStringExtra("callId") ?: return
+        val roomId = intent.getStringExtra("room_id") ?: return
+        val callerName = intent.getStringExtra("caller_name")
+                ?.takeIf { it.isNotBlank() }
+                ?: getString(CommonStrings.incoming_voice_call)
 
-        // ✅ FIX: ringer is now owned exclusively here.
-        // VectorFirebaseMessagingService no longer calls incomingCallRinger.start() for calls.
-        incomingCallRinger.start(fromBg = true, roomId = roomId)
-        Timber.tag(TAG).d("incoming call ring started in foreground service callId=$callId")
+        // DO NOT start ringer here — CallAndroidService is the sole ringer owner.
+        // Starting it here causes double-ring and resets the 8-cycle counter
+        // when CallAndroidService takes over and restarts it.
+        Timber.tag(TAG).d("showing bridge call notification callId=$callId")
 
         val notification = buildCallNotification(callId, roomId, callerName)
 

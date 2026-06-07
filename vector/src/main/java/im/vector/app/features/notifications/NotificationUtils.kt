@@ -487,10 +487,11 @@ class NotificationUtils @Inject constructor(
         return NotificationCompat.Builder(context, SILENT_NOTIFICATION_CHANNEL_ID)
                 .setContentTitle(ensureTitleNotEmpty(title))
                 .apply {
-                    setContentText(stringProvider.getString(CommonStrings.call_ringing))
                     if (call.mxCall.isVideoCall) {
+                        setContentText(stringProvider.getString(CommonStrings.incoming_video_call))
                         setSmallIcon(R.drawable.ic_call_answer_video)
                     } else {
+                        setContentText(stringProvider.getString(CommonStrings.call_ringing))
                         setSmallIcon(R.drawable.oz_chat_playstore_icon)
                     }
                 }
