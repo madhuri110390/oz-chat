@@ -143,23 +143,35 @@ class ImageContentRenderer @Inject constructor(
      * Used by Attachment Viewer.
      */
     fun render(data: Data, contextView: View, target: CustomViewTarget<*, Drawable>) {
-        val req = if (data.elementToDecrypt != null) {
-            // Encrypted image
-            Glide
-                    .with(contextView)
+        val thumbnailRequest = if (data.elementToDecrypt != null) {
+            Glide.with(contextView)
                     .asDrawable()
                     .load(data)
-                    .diskCacheStrategy(DiskCacheStrategy.NONE)
+                    .diskCacheStrategy(DiskCacheStrategy.DATA)
+                    .override(50)
         } else {
-            // Clear image
             val resolvedUrl = resolveUrl(data)
-            Glide
-                    .with(contextView)
+            Glide.with(contextView)
                     .asDrawable()
                     .load(resolvedUrl)
+                    .override(50)
         }
 
-        req
+        val fullRequest = if (data.elementToDecrypt != null) {
+            Glide.with(contextView)
+                    .asDrawable()
+                    .load(data)
+                    .diskCacheStrategy(DiskCacheStrategy.DATA)
+        } else {
+            val resolvedUrl = resolveUrl(data)
+            Glide.with(contextView)
+                    .asDrawable()
+                    .load(resolvedUrl)
+                    .diskCacheStrategy(DiskCacheStrategy.AUTOMATIC)
+        }
+
+        fullRequest
+                .thumbnail(thumbnailRequest)
                 .optionalFitCenter()
                 .into(target)
     }
