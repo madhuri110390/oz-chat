@@ -115,7 +115,8 @@
         android:id="@+id/overlayBottomBackground"
         android:layout_width="match_parent"
         android:layout_height="60dp"
-        android:background="@color/black_alpha"
+        android:background="@android:color/transparent"
+        android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent" />
 
     <ImageView

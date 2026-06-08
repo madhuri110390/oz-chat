@@ -92,34 +92,22 @@ class VideoViewHolder constructor(itemView: View) :
         views.videoThumbnailImage.isVisible = false
         views.videoLoaderProgress.isVisible = false
         views.videoControlIcon.isVisible = false
+        views.videoMediaViewerErrorView.isVisible = false
         views.videoView.visibility = View.VISIBLE
-
         setVideoAndPlay()
     }
-    //    private fun startPlaying() {
-//        views.videoThumbnailImage.isVisible = false
-//        views.videoLoaderProgress.isVisible = false
-//        views.videoControlIcon.isVisible = false
-//        views.videoView.visibility = View.VISIBLE
-//
-//        views.videoView.holder.addCallback(object : android.view.SurfaceHolder.Callback {
-//            override fun surfaceCreated(holder: android.view.SurfaceHolder) {
-//                // ✅ Surface is ready NOW — safe to set video
-//                setVideoAndPlay()
-//            }
-//            override fun surfaceChanged(holder: android.view.SurfaceHolder, format: Int, width: Int, height: Int) {}
-//            override fun surfaceDestroyed(holder: android.view.SurfaceHolder) {}
-//        })
-//
-//        // ✅ If surface already exists, callback won't fire — call directly
-//        if (views.videoView.holder.surface.isValid) {
-//            setVideoAndPlay()
-//        }
-//    }
     private fun setVideoAndPlay() {
         views.videoView.stopPlayback()
+        views.videoView.setOnCompletionListener {
+            views.videoView.stopPlayback()
+            stopTimer()
+            views.videoThumbnailImage.isVisible = true
+            views.videoControlIcon.isVisible = true
+            views.videoControlIcon.setImageResource(R.drawable.ic_play_arrow)
+            progress = 0
+        }
         views.videoView.setOnPreparedListener { mp ->
-           // mp.setVideoScalingMode(android.media.MediaPlayer.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING)
+            // mp.setVideoScalingMode(android.media.MediaPlayer.VIDEO_SCALING_MODE_SCALE_TO_FIT_WITH_CROPPING)
 
             views.videoView.visibility = View.VISIBLE
             views.videoView.translationZ = 0f
@@ -156,58 +144,7 @@ class VideoViewHolder constructor(itemView: View) :
             views.videoMediaViewerErrorView.isVisible = true
         }
     }
-//    private fun startPlaying() {
-//        views.videoThumbnailImage.isVisible = false
-//        views.videoLoaderProgress.isVisible = false
-//        views.videoControlIcon.isVisible = false
-//        // Toggle visibility to force SurfaceView redraw inside ViewPager2
-//        views.videoView.visibility = View.GONE
-//        views.videoView.visibility = View.VISIBLE
-//
-//        // Use MediaOverlay not OnTop — renders correctly inside ViewPager2
-//        views.videoView.setZOrderMediaOverlay(true)
-//        views.videoView.setOnPreparedListener {
-//            stopTimer()
-//            countUpTimer = CountUpTimer(intervalInMs = 100).also {
-//                it.tickListener = CountUpTimer.TickListener {
-//                    val duration = views.videoView.duration
-//                    val progress = views.videoView.currentPosition
-//                    val isPlaying = views.videoView.isPlaying
-//                    //                        Log.v("FOO", "isPlaying $isPlaying $progress/$duration")
-//                    eventListener?.get()?.onEvent(AttachmentEvents.VideoEvent(isPlaying, progress, duration))
-//                }
-//                it.start()
-//            }
-//            if (!wasPaused) {
-//                views.videoView.start()
-//                if (progress > 0) {
-//                    views.videoView.seekTo(progress)
-//                }
-//            }
-//        }
-////        try {
-////            views.videoView.setVideoPath(mVideoPath)
-////        } catch (failure: Throwable) {
-////            // Couldn't open
-////            Log.v(VideoViewHolder::class.java.name, "Failed to start video")
-////        }
-//        try {
-//            val videoUri = if (mVideoPath!!.startsWith("content://") || mVideoPath!!.startsWith("file://")) {
-//                android.net.Uri.parse(mVideoPath)
-//            } else {
-//                android.net.Uri.fromFile(java.io.File(mVideoPath!!))
-//            }
-//            views.videoView.setVideoURI(videoUri)
-//        } catch (failure: Throwable) {
-//            Log.v(VideoViewHolder::class.java.name, "Failed to start video: ${failure.message}")
-//        }
-////        if (!wasPaused) {
-////            views.videoView.start()
-////            if (progress > 0) {
-////                views.videoView.seekTo(progress)
-////            }
-////        }
-//    }
+
 
     private fun stopTimer() {
         countUpTimer?.stop()
