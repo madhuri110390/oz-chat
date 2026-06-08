@@ -68,22 +68,13 @@ class ZoomableImageViewHolder constructor(itemView: View) :
 
     override fun onAttached() {
         super.onAttached()
-        views.touchImageView.setOnTouchListener { v, event ->
-            android.util.Log.d("ZOOM", "PhotoView action=${event.actionMasked} pointers=${event.pointerCount}")
-            if (event.actionMasked == MotionEvent.ACTION_POINTER_DOWN) {
-                v.parent?.requestDisallowInterceptTouchEvent(true)
-                v.parent?.parent?.requestDisallowInterceptTouchEvent(true)
-                v.parent?.parent?.parent?.requestDisallowInterceptTouchEvent(true)
-                v.parent?.parent?.parent?.parent?.requestDisallowInterceptTouchEvent(true)
-            }
-            false
-        }
         views.touchImageView.apply {
             maximumScale = 5f
             mediumScale = 2.5f
             minimumScale = 1f
+            isClickable = true
+            isFocusable = true
             setOnScaleChangeListener { _, _, _ ->
-                android.util.Log.d("ZOOM", "SCALE CHANGED scale=$scale")
                 parent?.requestDisallowInterceptTouchEvent(scale > 1.0f)
             }
         }

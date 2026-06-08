@@ -184,7 +184,8 @@ class AttachmentOverlayView @JvmOverloads constructor(
         inflate(context, R.layout.merge_image_attachment_overlay, this)
         views = MergeImageAttachmentOverlayBinding.bind(this)
         setBackgroundColor(Color.TRANSPARENT)
-
+        isClickable = false
+        isFocusable = false
         views.overlayBackButton.setOnClickListener {
             interactionListener?.onDismiss()
         }
@@ -215,26 +216,21 @@ class AttachmentOverlayView @JvmOverloads constructor(
             }
         })
 
-        setOnClickListener {
-            if (isPlaying) {
-                val controlsVisible = views.overlayBackButton.alpha > 0f
-                if (controlsVisible) {
-                    hideControlsNow()
-                } else {
-                    showControls()
-                    scheduleHideControls()
-                }
-            }
-        }
+//        setOnClickListener {
+//            if (isPlaying) {
+//                val controlsVisible = views.overlayBackButton.alpha > 0f
+//                if (controlsVisible) {
+//                    hideControlsNow()
+//                } else {
+//                    showControls()
+//                    scheduleHideControls()
+//                }
+//            }
+//        }
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
-        if (!isVisible) return false
         if (ev.pointerCount > 1) return false
-        if (ev.actionMasked == MotionEvent.ACTION_DOWN) {
-            // Pass DOWN to pager so PhotoView initializes gesture
-            return false
-        }
         return super.dispatchTouchEvent(ev)
     }
 

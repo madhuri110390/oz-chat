@@ -16,7 +16,9 @@
     <FrameLayout
         android:id="@+id/dismissContainer"
         android:layout_width="match_parent"
-        android:layout_height="match_parent">
+        android:layout_height="match_parent"
+        android:clickable="false"
+        android:focusable="false">
 
         <FrameLayout
             android:id="@+id/transitionImageContainer"
