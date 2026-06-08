@@ -40,7 +40,7 @@ class SwipeToDismissHandler(
                     isTracking = true
                 }
                 startY = event.y
-                return true
+                return false
             }
             MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
                 if (isTracking) {
