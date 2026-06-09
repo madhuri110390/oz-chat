@@ -106,7 +106,7 @@ private val DEFAULT_AUDIO_CONSTRAINTS = MediaConstraints().apply {
 
 //private const val INVITE_TIMEOUT_IN_MS = 60_000L
 private const val INVITE_TIMEOUT_IN_MS = 60_000L   // keep as overall safety net
-private const val RING_TIMEOUT_IN_MS   = 40_000L   // ~8 rings at 5 s/ring
+private const val RING_TIMEOUT_IN_MS   = 60_000L   // ~8 rings at 5 s/ring
 
 private val loggerTag = LoggerTag("WebRtcCall", LoggerTag.VOIP)
 

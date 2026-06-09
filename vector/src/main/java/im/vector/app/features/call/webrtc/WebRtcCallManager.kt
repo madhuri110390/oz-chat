@@ -59,7 +59,7 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 private val loggerTag = LoggerTag("WebRtcCallManager", LoggerTag.VOIP)
-private const val RING_DURATION_MS = 40_000L
+private const val RING_DURATION_MS = 60_000L
 
 @Singleton
 class WebRtcCallManager @Inject constructor(
