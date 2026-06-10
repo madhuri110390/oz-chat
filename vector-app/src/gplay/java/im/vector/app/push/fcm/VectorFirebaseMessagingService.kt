@@ -15,6 +15,7 @@ import im.vector.app.core.pushers.PushersManager
 import im.vector.app.core.pushers.UnifiedPushHelper
 import im.vector.app.core.pushers.VectorPushHandler
 import im.vector.app.core.services.CallAndroidService
+import im.vector.app.core.services.CallPlaceholderTag
 import im.vector.app.core.services.IncomingCallRinger
 import im.vector.app.features.call.webrtc.WebRtcCallManager
 import im.vector.app.features.notifications.CallForegroundService
@@ -118,12 +119,13 @@ class VectorFirebaseMessagingService : FirebaseMessagingService() {
 
             if (isCallPush) {
                 notificationUtils.cancelNotificationMessage(null, NotificationUtils.CALL_NOTIFICATION_ID)
-                // Ringer is owned by CallAndroidService — not started here
+                // Store tag so CallAndroidService can cancel this placeholder on termination
+                // — prevents ghost "Incoming Call" showing as duplicate missed call
+                CallPlaceholderTag.value = placeholderTag
             }
 
             showGenericNotificationFromFcm(message, placeholderTag, callId, isCallPush)
 
-            // callId and roomId are declared above — no unresolved reference
             if (isCallPush && callId != null && roomId != null) {
                 val callerName = data["sender_display_name"] ?: data["room_name"] ?: ""
                 startCallForegroundService(callId, roomId, callerName)
@@ -142,10 +144,7 @@ class VectorFirebaseMessagingService : FirebaseMessagingService() {
         }
     }
 
-    /**
-     * After sync, WebRTC may have the real call object — hand off to CallAndroidService
-     * for full call UI + ringtone.
-     */
+    // AFTER
     private fun promoteToVoipCallIfNeeded(alreadyCallPush: Boolean, roomId: String?) {
         val ringingCall = webRtcCallManager.getCalls().firstOrNull {
             it.mxCall.state is CallState.LocalRinging
@@ -153,9 +152,8 @@ class VectorFirebaseMessagingService : FirebaseMessagingService() {
 
         val callId = ringingCall.mxCall.callId
         Timber.tag(loggerTag.value).d("VoIP incoming call after sync callId=$callId")
-        if (!alreadyCallPush) {
-            incomingCallRinger.start(fromBg = true, roomId = roomId ?: ringingCall.nativeRoomId)
-        }
+        // Ringer is always owned by CallAndroidService via ACTION_INCOMING_RINGING_CALL
+        // Never start it directly here — double-start resets cycle counter to 0
         CallAndroidService.onIncomingCallRinging(
                 context = applicationContext,
                 callId = callId,
@@ -169,7 +167,7 @@ class VectorFirebaseMessagingService : FirebaseMessagingService() {
                 action = CallForegroundService.ACTION_INCOMING_CALL
                 putExtra("callId", callId)
                 putExtra("room_id", roomId)
-                putExtra("caller_name", callerName)  // ← add this
+                putExtra("caller_name", callerName)
             }
             ContextCompat.startForegroundService(this, intent)
             Timber.tag(loggerTag.value).d("CallForegroundService started callId=$callId")
@@ -189,7 +187,7 @@ class VectorFirebaseMessagingService : FirebaseMessagingService() {
             return
         }
 
-        // ✅ FIX 1: Skip entirely for non-call pushes — real notification comes from vectorPushHandler
+        // Skip for non-call pushes — real notification comes from vectorPushHandler
         if (!isCall) {
             Timber.tag(loggerTag.value).d("Skipping generic notification for message push — handled by sync")
             return
@@ -204,19 +202,15 @@ class VectorFirebaseMessagingService : FirebaseMessagingService() {
                     ?: data["title"]
                     ?: data["subject"]
                     ?: data["room_name"]
-                    ?: "Incoming Call"  // ✅ FIX 2: No "New Message" fallback needed anymore
+                    ?: "Incoming Call"
 
             val body = message.notification?.body
                     ?: data["body"]
                     ?: data["message"]
-                    ?: null  // ✅ FIX 3: Removed "New message received" fallback completely
 
             val isNoisy = data["noisy"]?.toBooleanStrictOrNull()
                     ?: FcmPushPayloadHelper.isHighPriorityPush(data)
                     ?: true
-
-            // ✅ FIX 4: Always CALL_NOTIFICATION_ID here since we return early for messages above
-            val notificationId = NotificationUtils.CALL_NOTIFICATION_ID
 
             Timber.tag(loggerTag.value).d("incoming call invite received callId=$callId roomId=${data["room_id"]}")
 
@@ -232,18 +226,15 @@ class VectorFirebaseMessagingService : FirebaseMessagingService() {
                 Timber.tag(loggerTag.value).d("canUseFullScreenIntent=${nm?.canUseFullScreenIntent()}")
             }
 
-            // Cancel any stale message notifications before showing call notification
-            notificationUtils.cancelNotificationMessage(
-                    null, NotificationUtils.ROOM_MESSAGES_NOTIFICATION_ID
-            )
+            notificationUtils.cancelNotificationMessage(null, NotificationUtils.ROOM_MESSAGES_NOTIFICATION_ID)
 
             notificationUtils.showNotificationMessage(
                     tag = overrideTag,
-                    id = notificationId,
+                    id = NotificationUtils.CALL_NOTIFICATION_ID,
                     notification = notificationUtils.buildGenericPushNotification(
                             title = title,
                             body = body,
-                            isCall = true,  // ✅ always true now
+                            isCall = true,
                             roomId = data["room_id"],
                             threadId = data["thread_id"],
                             noisy = isNoisy,
@@ -251,7 +242,7 @@ class VectorFirebaseMessagingService : FirebaseMessagingService() {
                     ).build(),
             )
 
-            Timber.tag(loggerTag.value).d("lock screen call notification shown")
+            Timber.tag(loggerTag.value).d("lock screen call notification shown tag=$overrideTag")
 
         } catch (e: Exception) {
             Timber.tag(loggerTag.value).e(e, "Failed to show FCM notification")
@@ -261,4 +252,6 @@ class VectorFirebaseMessagingService : FirebaseMessagingService() {
     override fun onDestroy() {
         super.onDestroy()
     }
+
+
 }

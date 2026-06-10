@@ -59,12 +59,12 @@ class CallForegroundService : Service() {
     }
 
     override fun onDestroy() {
-        incomingCallRinger.stop()
-        NotificationManagerCompat.from(this).cancel(NotificationUtils.CALL_NOTIFICATION_ID)
+        // DO NOT stop ringer here — CallAndroidService owns it after handoff
+        // DO NOT cancel notification — CallAndroidService reuses CALL_NOTIFICATION_ID
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
-            stopForeground(STOP_FOREGROUND_REMOVE)
+            stopForeground(STOP_FOREGROUND_DETACH)
         } else {
-            @Suppress("DEPRECATION") stopForeground(true)
+            @Suppress("DEPRECATION") stopForeground(false)
         }
         super.onDestroy()
     }
@@ -103,10 +103,9 @@ private fun stopSelfClean() {
         } else {
             startForeground(NotificationUtils.CALL_NOTIFICATION_ID, notification)
         }
-
-        // Start ringer from foreground context — required on Android 12+
-        incomingCallRinger.start(fromBg = true, roomId = roomId)
-        Timber.tag(TAG).d("lock screen call notification shown, ringer started")
+        // DO NOT start ringer here — CallAndroidService owns the ringer
+        // Starting it here resets the 8-cycle counter when CFS hands off to CallAndroidService
+        Timber.tag(TAG).d("CallForegroundService placeholder notification shown")
     }
 
     private fun buildCallNotification(callId: String, roomId: String, callerName: String): Notification {

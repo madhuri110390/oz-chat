@@ -13,17 +13,16 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.graphics.Bitmap
 import android.os.Binder
+import android.os.Build
 import android.support.v4.media.session.MediaSessionCompat
 import android.view.KeyEvent
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 import androidx.media.session.MediaButtonReceiver
-import com.airbnb.mvrx.Mavericks
 import com.bumptech.glide.Glide
 import dagger.hilt.android.AndroidEntryPoint
 import im.vector.app.core.extensions.singletonEntryPoint
 import im.vector.app.core.extensions.startForegroundCompat
-import im.vector.app.features.call.CallArgs
 import im.vector.app.features.call.VectorCallActivity
 import im.vector.app.features.call.audio.MicrophoneAccessService
 import im.vector.app.features.call.telecom.CallConnection
@@ -47,7 +46,9 @@ import timber.log.Timber
 import javax.inject.Inject
 
 private val loggerTag = LoggerTag("CallService", LoggerTag.VOIP)
-
+object CallPlaceholderTag {
+    @Volatile var value: String? = null
+}
 @AndroidEntryPoint
 class CallAndroidService : VectorAndroidService() {
 
@@ -87,8 +88,20 @@ class CallAndroidService : VectorAndroidService() {
     override fun onDestroy() {
         incomingCallRinger.stop()
         callRingPlayerOutgoing?.stop()
-        // REPLACE cancelAll() with specific cancellation:
-        notificationManager.cancel(NotificationUtils.CALL_NOTIFICATION_ID)
+        // Cancel all call-related notifications — incoming uses CALL_NOTIFICATION_ID (3000),
+        // outgoing/in-progress uses callId.hashCode()
+        val sysNm = getSystemService(NOTIFICATION_SERVICE) as? android.app.NotificationManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && sysNm != null) {
+            sysNm.activeNotifications
+                    .filter { sbn ->
+                        sbn.id == NotificationUtils.CALL_NOTIFICATION_ID ||
+                                knownCalls.keys.any { it.hashCode() == sbn.id }
+                    }
+                    .forEach { sbn -> notificationManager.cancel(sbn.tag, sbn.id) }
+        } else {
+            notificationManager.cancel(null, NotificationUtils.CALL_NOTIFICATION_ID)
+            knownCalls.keys.forEach { notificationManager.cancel(null, it.hashCode()) }
+        }
         stopForegroundCompat()
         mediaSession?.release()
         mediaSession = null
@@ -108,32 +121,21 @@ class CallAndroidService : VectorAndroidService() {
 
         when (intent?.action) {
 
-//            ACTION_INCOMING_RINGING_CALL -> {
-//                mediaSession?.isActive = true
-//                val fromBg = intent.getBooleanExtra(EXTRA_IS_IN_BG, false)
-//                val callId = intent.getStringExtra(EXTRA_CALL_ID)
-//                val customTone = callId
-//                        ?.let { callManager.getCallById(it) }
-//                        ?.nativeRoomId
-//                        ?.let { vectorPreferences.getRoomNotificationTone(it) }
-//                displayIncomingCallNotification(intent)  // become foreground first
-//                incomingCallRinger.start(fromBg, customTone)
-//
-//                // Step 3: stop CallForegroundService LAST — after we are foreground
-//                // Stopping it first cancels CALL_NOTIFICATION_ID before we post ours
-//                CallForegroundService.stop(applicationContext)
-//            }
             ACTION_INCOMING_RINGING_CALL -> {
                 mediaSession?.isActive = true
                 val fromBg = intent.getBooleanExtra(EXTRA_IS_IN_BG, false)
-                val callId = intent.getStringExtra(EXTRA_CALL_ID)
+                val callId = intent.getStringExtra(EXTRA_CALL_ID) ?: ""
+                val isFirstArrival = !knownCalls.containsKey(callId)  // ← check BEFORE displayIncoming adds it
                 val customTone = callId
+                        .takeIf { it.isNotEmpty() }
                         ?.let { callManager.getCallById(it) }
                         ?.nativeRoomId
                         ?.let { vectorPreferences.getRoomNotificationTone(it) }
                 displayIncomingCallNotification(intent)
-                incomingCallRinger.start(fromBg, customTone)
-                // No CallForegroundService.stop() here
+                if (isFirstArrival) {
+                    Timber.e("RING_DEBUG calling incomingCallRinger.start()")
+                    incomingCallRinger.start(fromBg, customTone)
+                }
             }
             ACTION_OUTGOING_RINGING_CALL -> {
                 mediaSession?.isActive = true
@@ -143,8 +145,8 @@ class CallAndroidService : VectorAndroidService() {
             ACTION_ONGOING_CALL -> {
                 incomingCallRinger.stop()
                 callRingPlayerOutgoing?.stop()
-                CallForegroundService.stop(applicationContext)
-                displayCallInProgressNotification(intent)
+                displayCallInProgressNotification(intent)      // 1. post notification first
+                CallForegroundService.stop(applicationContext) // 2. then kill placeholder
             }
             ACTION_CALL_TERMINATED -> {
                 handleCallTerminated(intent)
@@ -167,6 +169,11 @@ class CallAndroidService : VectorAndroidService() {
         val call = callManager.getCallById(callId) ?: return Unit.also {
             handleUnexpectedState(callId)
         }
+// Clear any stale entries for calls that are no longer active
+// to prevent ghost missed call notifications on new calls
+        knownCalls.keys
+                .filter { callManager.getCallById(it) == null }
+                .forEach { knownCalls.remove(it) }
         val callInformation = call.toCallInformation()
         val isVideoCall = call.mxCall.isVideoCall
         val fromBg = intent.getBooleanExtra(EXTRA_IS_IN_BG, false)
@@ -175,10 +182,7 @@ class CallAndroidService : VectorAndroidService() {
 
         val incomingCallAlert = IncomingCallAlert(callId,
                 shouldBeDisplayedIn = { activity ->
-                    // Don't show alert if VectorCallActivity is already handling this call
-                    if (activity is VectorCallActivity) {
-                        false  // ← never show alert when call screen is open
-                    } else true
+                    if (activity is VectorCallActivity) false else true
                 }
         ).apply {
             viewBinder = IncomingCallAlert.ViewBinder(
@@ -220,6 +224,28 @@ class CallAndroidService : VectorAndroidService() {
                 fromBg = fromBg,
                 avatarBitmap = avatarBitmap
         )
+
+// Cancel the FCM placeholder BEFORE posting real notification —
+// both use CALL_NOTIFICATION_ID but different tags, so both show simultaneously
+        // FIXED
+// Step 1: stop CallForegroundService first — this detaches its foreground notification
+        CallForegroundService.stop(applicationContext)
+
+// Step 2: cancel ALL variants of CALL_NOTIFICATION_ID regardless of tag
+        val sysNm = getSystemService(NOTIFICATION_SERVICE) as? android.app.NotificationManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && sysNm != null) {
+            sysNm.activeNotifications
+                    .filter { it.id == NotificationUtils.CALL_NOTIFICATION_ID }
+                    .forEach { sbn -> notificationManager.cancel(sbn.tag, sbn.id) }
+        } else {
+            notificationManager.cancel(null, NotificationUtils.CALL_NOTIFICATION_ID)
+        }
+        CallPlaceholderTag.value?.let { tag ->
+            notificationManager.cancel(tag, NotificationUtils.CALL_NOTIFICATION_ID)
+            CallPlaceholderTag.value = null
+        }
+
+// Step 3: now post real notification
         if (knownCalls.isEmpty()) {
             startForegroundCompat(NotificationUtils.CALL_NOTIFICATION_ID, notification) {
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL
@@ -230,16 +256,8 @@ class CallAndroidService : VectorAndroidService() {
         knownCalls[callId] = callInformation
     }
 
+    // In handleCallTerminated — fix wasConnected race condition:
     private fun handleCallTerminated(intent: Intent) {
-        incomingCallRinger.stop()
-        callRingPlayerOutgoing?.stop()
-        // Cancel notification immediately
-        notificationManager.cancel(NotificationUtils.CALL_NOTIFICATION_ID)
-        NotificationManagerCompat.from(this).cancelAll()
-        // Stop CallForegroundService
-        try {
-            stopService(Intent(this, CallForegroundService::class.java))
-        } catch (e: Exception) { }
         val callId = intent.getStringExtra(EXTRA_CALL_ID) ?: ""
         val endCallReason = intent.getSerializableExtraCompat<EndCallReason>(EXTRA_END_CALL_REASON)
         val rejected = intent.getBooleanExtra(EXTRA_END_CALL_REJECTED, false)
@@ -247,53 +265,61 @@ class CallAndroidService : VectorAndroidService() {
         val opponentUserId = intent.getStringExtra(EXTRA_OPPONENT_USER_ID) ?: ""
         val isVideoCall = intent.getBooleanExtra(EXTRA_IS_VIDEO_CALL, false)
         val isOutgoing = intent.getBooleanExtra(EXTRA_IS_OUTGOING, false)
+        // Read wasInProgress from intent — set by caller when call was actually connected
+        val wasInProgress = intent.getBooleanExtra(EXTRA_CALL_WAS_IN_PROGRESS, false)
 
-        // Stop ringers and cancel ALL notifications immediately
         incomingCallRinger.stop()
         callRingPlayerOutgoing?.stop()
         alertManager.cancelAlert(callId)
 
-        notificationManager.cancel(NotificationUtils.CALL_NOTIFICATION_ID)
-// Don't cancelAll() — missed call notification posted by WebRtcCallManager
+        val sysNm = getSystemService(NOTIFICATION_SERVICE) as? android.app.NotificationManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && sysNm != null) {
+            sysNm.activeNotifications
+                    .filter { it.id == NotificationUtils.CALL_NOTIFICATION_ID || it.id == callId.hashCode() }
+                    .forEach { sbn -> notificationManager.cancel(sbn.tag, sbn.id) }
+        } else {
+            notificationManager.cancel(null, NotificationUtils.CALL_NOTIFICATION_ID)
+            notificationManager.cancel(null, callId.hashCode())
+        }
+
+        CallPlaceholderTag.value?.let { pendingTag ->
+            notificationManager.cancel(pendingTag, NotificationUtils.CALL_NOTIFICATION_ID)
+            CallPlaceholderTag.value = null
+            Timber.tag(loggerTag.value).d("Cancelled FCM placeholder tag=$pendingTag")
+        }
+
         CallForegroundService.stop(applicationContext)
+        try { stopService(Intent(this, CallForegroundService::class.java)) } catch (e: Exception) { }
 
         val terminatedCall = knownCalls.remove(callId)
-        val wasConnected = connectedCallIds.remove(callId)
+        // wasConnected = either tracked via connectedCallIds OR caller explicitly flagged it
+        val wasConnected = connectedCallIds.remove(callId) || wasInProgress
 
-        val callInfo = terminatedCall ?: if (nativeRoomId != null) {
-            CallInformation(
-                    callId = callId,
-                    nativeRoomId = nativeRoomId,
-                    opponentUserId = opponentUserId,
-                    opponentMatrixItem = null,
-                    isVideoCall = isVideoCall,
-                    isOutgoing = isOutgoing
-            )
-        } else null
+        val callInfo = terminatedCall
 
-//        if (callInfo != null && !wasConnected && !rejected &&
-//                endCallReason != EndCallReason.ANSWERED_ELSEWHERE) {
-//
-//            if (isOutgoing) {
-//                // Caller side — receiver didn't answer
-//                Timber.tag(loggerTag.value).v("Showing call not answered notification for $callId")
-//                val notification = notificationUtils.buildCallNotAnsweredNotification(callInfo)
-//                notificationManager.notify(
-//                        MISSED_CALL_TAG,
-//                        callInfo.nativeRoomId.hashCode(),
-//                        notification
-//                )
-//            } else {
-//                // Receiver side — missed incoming call
-//                Timber.tag(loggerTag.value).v("Showing missed call notification for $callId")
-//                val notification = notificationUtils.buildCallMissedNotification(callInfo)
-//                notificationManager.notify(
-//                        MISSED_CALL_TAG,
-//                        callInfo.nativeRoomId.hashCode(),
-//                        notification
-//                )
-//            }
-//        }
+        if (callInfo != null
+                && !wasConnected       // answered calls skipped
+                && !rejected           // declined calls skipped
+                && endCallReason != EndCallReason.ANSWERED_ELSEWHERE
+                && !(isOutgoing && endCallReason == EndCallReason.USER_HANGUP)
+                && (System.currentTimeMillis() - callInfo.startedRingingAt) > 2000L
+        ) {
+            if (isOutgoing) {
+                Timber.tag(loggerTag.value).v("Showing call not answered notification for $callId")
+                notificationManager.notify(
+                        MISSED_CALL_TAG,
+                        callInfo.nativeRoomId.hashCode(),
+                        notificationUtils.buildCallNotAnsweredNotification(callInfo)
+                )
+            } else {
+                Timber.tag(loggerTag.value).v("Showing missed call notification for $callId")
+                notificationManager.notify(
+                        MISSED_CALL_TAG,
+                        callInfo.nativeRoomId.hashCode(),
+                        notificationUtils.buildCallMissedNotification(callInfo)
+                )
+            }
+        }
 
         if (knownCalls.isEmpty()) {
             Timber.tag(loggerTag.value).v("No more calls, stopping service")
@@ -342,17 +368,24 @@ class CallAndroidService : VectorAndroidService() {
             handleUnexpectedState(callId)
         }
         alertManager.cancelAlert(callId)
+
+        // Cancel incoming call notification before showing in-progress
+        notificationManager.cancel(null, NotificationUtils.CALL_NOTIFICATION_ID)
+        val sysNm = getSystemService(NOTIFICATION_SERVICE) as? android.app.NotificationManager
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && sysNm != null) {
+            sysNm.activeNotifications
+                    .filter { it.id == NotificationUtils.CALL_NOTIFICATION_ID }
+                    .forEach { sbn -> notificationManager.cancel(sbn.tag, sbn.id) }
+        }
+
         val callInformation = call.toCallInformation()
         val notification = notificationUtils.buildPendingCallNotification(
                 call = call,
                 title = callInformation.opponentMatrixItem?.getBestName() ?: callInformation.opponentUserId
         )
-        if (knownCalls.isEmpty()) {
-            startForegroundCompat(callId.hashCode(), notification) {
-                ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL
-            }
-        } else {
-            notificationManager.notify(callId.hashCode(), notification)
+        // Always use startForegroundCompat to replace existing foreground notification
+        startForegroundCompat(callId.hashCode(), notification) {
+            ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL
         }
         knownCalls[callId] = callInformation
     }
@@ -360,7 +393,8 @@ class CallAndroidService : VectorAndroidService() {
     private fun handleUnexpectedState(callId: String?) {
         incomingCallRinger.stop()
         callRingPlayerOutgoing?.stop()
-        notificationManager.cancelAll()
+        notificationManager.cancel(null, NotificationUtils.CALL_NOTIFICATION_ID)
+        callId?.let { notificationManager.cancel(null, it.hashCode()) }
         CallForegroundService.stop(applicationContext)
         stopForegroundCompat()
         mediaSession?.isActive = false
@@ -390,8 +424,9 @@ class CallAndroidService : VectorAndroidService() {
             val opponentUserId: String,
             val opponentMatrixItem: MatrixItem?,
             val isVideoCall: Boolean,
-            val isOutgoing: Boolean
-    )
+            val isOutgoing: Boolean,
+            val startedRingingAt: Long = System.currentTimeMillis(), // ADD THIS
+            )
 
     companion object {
         private const val DEFAULT_NOTIFICATION_ID = 6480
@@ -410,6 +445,7 @@ class CallAndroidService : VectorAndroidService() {
         private const val EXTRA_OPPONENT_USER_ID = "EXTRA_OPPONENT_USER_ID"
         private const val EXTRA_IS_VIDEO_CALL = "EXTRA_IS_VIDEO_CALL"
         private const val EXTRA_IS_OUTGOING = "EXTRA_IS_OUTGOING"
+        private const val EXTRA_CALL_WAS_IN_PROGRESS = "EXTRA_CALL_WAS_IN_PROGRESS"
 
         fun onIncomingCallRinging(
                 context: Context,
@@ -424,10 +460,7 @@ class CallAndroidService : VectorAndroidService() {
             ContextCompat.startForegroundService(context, intent)
         }
 
-        fun onOutgoingCallRinging(
-                context: Context,
-                callId: String
-        ) {
+        fun onOutgoingCallRinging(context: Context, callId: String) {
             val intent = Intent(context, CallAndroidService::class.java).apply {
                 action = ACTION_OUTGOING_RINGING_CALL
                 putExtra(EXTRA_CALL_ID, callId)
@@ -435,10 +468,7 @@ class CallAndroidService : VectorAndroidService() {
             ContextCompat.startForegroundService(context, intent)
         }
 
-        fun onPendingCall(
-                context: Context,
-                callId: String
-        ) {
+        fun onPendingCall(context: Context, callId: String) {
             val intent = Intent(context, CallAndroidService::class.java).apply {
                 action = ACTION_ONGOING_CALL
                 putExtra(EXTRA_CALL_ID, callId)
@@ -454,7 +484,8 @@ class CallAndroidService : VectorAndroidService() {
                 nativeRoomId: String? = null,
                 opponentUserId: String? = null,
                 isVideoCall: Boolean = false,
-                isOutgoing: Boolean = false
+                isOutgoing: Boolean = false,
+                wasInProgress: Boolean = false   // ADD THIS
         ) {
             val intent = Intent(context, CallAndroidService::class.java).apply {
                 action = ACTION_CALL_TERMINATED
@@ -465,6 +496,7 @@ class CallAndroidService : VectorAndroidService() {
                 opponentUserId?.let { putExtra(EXTRA_OPPONENT_USER_ID, it) }
                 putExtra(EXTRA_IS_VIDEO_CALL, isVideoCall)
                 putExtra(EXTRA_IS_OUTGOING, isOutgoing)
+                putExtra(EXTRA_CALL_WAS_IN_PROGRESS, wasInProgress)   // ADD THIS
             }
             ContextCompat.startForegroundService(context, intent)
         }

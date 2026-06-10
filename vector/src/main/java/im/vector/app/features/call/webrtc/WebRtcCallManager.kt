@@ -51,6 +51,7 @@ import org.webrtc.DefaultVideoDecoderFactory
 import org.webrtc.DefaultVideoEncoderFactory
 import org.webrtc.PeerConnectionFactory
 import timber.log.Timber
+import java.util.Collections
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.CopyOnWriteArrayList
 import java.util.concurrent.Executors
@@ -70,6 +71,7 @@ class WebRtcCallManager @Inject constructor(
         private val voipConfig: VoipConfig,
         private val notificationUtils: im.vector.app.features.notifications.NotificationUtils,
         private val incomingCallRinger: IncomingCallRinger,
+
 ) : CallListener,
         DefaultLifecycleObserver {
 
@@ -84,7 +86,7 @@ class WebRtcCallManager @Inject constructor(
 
     private val sessionScope: CoroutineScope?
         get() = currentSession?.coroutineScope
-
+    private val connectedCallIds: MutableSet<String> = Collections.newSetFromMap(ConcurrentHashMap())
     interface Listener {
         fun onCallEnded(callId: String) = Unit
         fun onCurrentCallChange(call: WebRtcCall?) = Unit
@@ -231,43 +233,7 @@ class WebRtcCallManager @Inject constructor(
                 .setVideoDecoderFactory(defaultVideoDecoderFactory)
                 .createPeerConnectionFactory()
     }
-    private fun postMissedCallNotificationIfNeeded(
-            callId: String,
-            endCallReason: EndCallReason,
-            rejected: Boolean,
-            nativeRoomId: String,
-            opponentUserId: String,
-            isVideoCall: Boolean,
-            isOutgoing: Boolean,
-            opponentMatrixItem: org.matrix.android.sdk.api.util.MatrixItem?
-    ) {
-        // Don't show if call was rejected, answered elsewhere, or we were the caller
-        if (rejected) return
-        if (endCallReason == EndCallReason.ANSWERED_ELSEWHERE) return
-        if (isOutgoing) return
 
-        val callInfo = CallAndroidService.CallInformation(
-                callId = callId,
-                nativeRoomId = nativeRoomId,
-                opponentUserId = opponentUserId,
-                opponentMatrixItem = opponentMatrixItem,
-                isVideoCall = isVideoCall,
-                isOutgoing = isOutgoing
-        )
-
-        val nm = androidx.core.app.NotificationManagerCompat.from(context)
-        Timber.tag(loggerTag.value).v("Posting missed call notification for $callId")
-
-        try {
-            nm.notify(
-                    "MISSED_CALL_TAG",
-                    (nativeRoomId + callId).hashCode(),  // ← use callId too, not just roomId
-                    notificationUtils.buildCallMissedNotification(callInfo)
-            )
-        } catch (e: Exception) {
-            Timber.tag(loggerTag.value).e(e, "Failed to post missed call notification")
-        }
-    }
     private fun onCallActive(call: WebRtcCall) {
         Timber.tag(loggerTag.value).v("WebRtcPeerConnectionManager onCall active: ${call.mxCall.callId}")
         val currentCall = getCurrentCall().takeIf { it != call }
@@ -275,6 +241,7 @@ class WebRtcCallManager @Inject constructor(
         audioManager.setMode(if (call.mxCall.isVideoCall) CallAudioManager.Mode.VIDEO_CALL else CallAudioManager.Mode.AUDIO_CALL)
         call.trackCallStarted()
         this.currentCall.setAndNotify(call)
+        connectedCallIds.add(call.mxCall.callId)  // ← ADD THIS LINE ONLY
     }
 
     private fun onCallEnded(callId: String, endCallReason: EndCallReason, rejected: Boolean) {
@@ -283,9 +250,8 @@ class WebRtcCallManager @Inject constructor(
             Timber.tag(loggerTag.value).v("On call ended for unknown call $callId")
         }
         CallForegroundService.stop(context)
-        incomingCallRinger.stop()
-        // Capture opponent info BEFORE anything else — session/call may be gone by the time
-        // the delayed handler runs
+        // DO NOT call incomingCallRinger.stop() here — owned by CallAndroidService
+
         val opponentMatrixItem = webRtcCall.getOpponentAsMatrixItem(currentSession)
         val nativeRoomId = webRtcCall.nativeRoomId
         recentlyEndedCallRooms.add(nativeRoomId)
@@ -298,29 +264,21 @@ class WebRtcCallManager @Inject constructor(
 
         webRtcCall.trackCallEnded()
 
-        // Stop FCM service immediately
-        CallForegroundService.stop(context)
+        val capturedNativeRoomId = nativeRoomId
+        val capturedOpponentUserId = opponentUserId
+        val capturedIsVideoCall = isVideoCall
+        val capturedIsOutgoing = isOutgoing
 
-        // Post missed call notification DIRECTLY after short delay
-        // Post missed call notification first
-        android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
-            postMissedCallNotificationIfNeeded(
-                    callId = callId,
-                    endCallReason = endCallReason,
-                    rejected = rejected,
-                    nativeRoomId = nativeRoomId,
-                    opponentUserId = opponentUserId,
-                    isVideoCall = isVideoCall,
-                    isOutgoing = isOutgoing,
-                    opponentMatrixItem = opponentMatrixItem
-            )
-        }, 500)
+        // Capture wasInProgress NOW before the delayed lambda runs
+        // connectedCallIds.remove returns true only if call was answered
+        val wasInProgress = connectedCallIds.remove(callId)
 
-// Terminate service AFTER missed call notification is posted
         android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
             CallAndroidService.onCallTerminated(
                     context, callId, endCallReason, rejected,
-                    nativeRoomId, opponentUserId, isVideoCall, isOutgoing
+                    capturedNativeRoomId, capturedOpponentUserId,
+                    capturedIsVideoCall, capturedIsOutgoing,
+                    wasInProgress = wasInProgress  // correct value, captured immediately
             )
         }, 1500)
 
@@ -335,13 +293,11 @@ class WebRtcCallManager @Inject constructor(
             currentCallsListeners.forEach { it.onCallEnded(callId) }
         }
         if (getCurrentCall() == null) {
-            Timber.tag(loggerTag.value).v("Dispose peerConnectionFactory as there is no need to keep one")
             peerConnectionFactory?.dispose()
             peerConnectionFactory = null
             audioManager.setMode(CallAudioManager.Mode.DEFAULT)
             if (syncStartedWhenInBackground) {
                 if (!unifiedPushHelper.isBackgroundSync()) {
-                    Timber.tag(loggerTag.value).v("Sync started when in background, stop it")
                     currentSession?.syncService()?.stopAnyBackgroundSync()
                 }
                 syncStartedWhenInBackground = false
@@ -486,18 +442,11 @@ class WebRtcCallManager @Inject constructor(
                 ?: return Unit.also {
                     Timber.tag(loggerTag.value).w("onCallHangupReceived for non active call? ${callHangupContent.callId}")
                 }
-        // Delegate to WebRtcCall for proper internal state transition
         call.onCallHangupReceived(callHangupContent)
-        // Safety net: if WebRtcCall didn't trigger onCallEnded within 500ms
-        // (happens when hangup arrives during LocalRinging state),
-        // force terminate at manager level.
         ringTimeoutScope.launch {
-            delay(500)
+            delay(2000) // was 500 — gives ringer time to complete current cycle before stopping
             if (callsByCallId.containsKey(callHangupContent.callId)) {
-                Timber.tag(loggerTag.value).w(
-                        "Force terminating call ${callHangupContent.callId} — " +
-                                "WebRtcCall did not self-terminate after hangup"
-                )
+                Timber.tag(loggerTag.value).w("Force terminating call ${callHangupContent.callId}")
                 onCallEnded(
                         callHangupContent.callId,
                         callHangupContent.reason ?: EndCallReason.USER_HANGUP,

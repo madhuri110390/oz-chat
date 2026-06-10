@@ -412,7 +412,7 @@ class NotificationUtils @Inject constructor(
         }
         val fullScreenPi = PendingIntent.getActivity(
                 context,
-                clock.epochMillis().toInt(),
+                call.callId.hashCode(),
                 contentIntent,
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntentCompat.FLAG_IMMUTABLE
         )
@@ -459,7 +459,7 @@ class NotificationUtils @Inject constructor(
                 .setPriority(NotificationCompat.PRIORITY_MAX)
                 .setOngoing(true)
                 .setAutoCancel(false)
-                .setOnlyAlertOnce(true)
+                .setOnlyAlertOnce(false)
                 .setFullScreenIntent(fullScreenPi, true)
                 // NO CallStyle here — activity is already open, we don't want heads-up buttons
                 .addAction(
@@ -689,7 +689,7 @@ class NotificationUtils @Inject constructor(
             PendingIntent.FLAG_UPDATE_CURRENT
         }
 
-        return PendingIntent.getActivity(context, FULL_SCREEN_INTENT_REQUEST_CODE, intent, flags)
+        return PendingIntent.getActivity(context,  callId?.hashCode() ?: FULL_SCREEN_INTENT_REQUEST_CODE, intent, flags)
     }
     fun buildGenericPushNotification(
             title: String?,
@@ -721,6 +721,7 @@ class NotificationUtils @Inject constructor(
                 .setContentText(safeBody)
                 .setStyle(NotificationCompat.BigTextStyle().bigText(safeBody))
                 .setSmallIcon(if (isCall) R.drawable.ic_call_answer else R.drawable.oz_chat_playstore_icon)
+                .setColor(ContextCompat.getColor(context, android.R.color.holo_orange_light))
                 .setColor(accentColor)
                 .setAutoCancel(true)
                 .setCategory(if (isCall) NotificationCompat.CATEGORY_CALL else NotificationCompat.CATEGORY_MESSAGE)

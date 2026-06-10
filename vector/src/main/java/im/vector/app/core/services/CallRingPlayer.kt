@@ -39,32 +39,11 @@ class CallRingPlayerIncoming(
     private val VIBRATE_PATTERN = longArrayOf(0, 400, 600)
     private val RING_CYCLES = 8
     fun start(fromBg: Boolean, customToneUri: Uri? = null) {
+        Timber.e("RING_DEBUG start() called fromBg=$fromBg")
         val audioManager = applicationContext.getSystemService<AudioManager>()
-
-        // Request audio focus so ringtone plays even on lock screen
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val focusRequest = android.media.AudioFocusRequest.Builder(
-                    AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE
-            )
-                    .setAudioAttributes(
-                            AudioAttributes.Builder()
-                                    .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE)
-                                    .setContentType(AudioAttributes.CONTENT_TYPE_MUSIC)
-                                    .build()
-                    )
-                    .setAcceptsDelayedFocusGain(false)
-                    .build()
-            audioManager?.requestAudioFocus(focusRequest)
-        } else {
-            @Suppress("DEPRECATION")
-            audioManager?.requestAudioFocus(
-                    null, AudioManager.STREAM_RING,
-                    AudioManager.AUDIOFOCUS_GAIN_TRANSIENT_EXCLUSIVE
-            )
-        }
-
         val incomingCallChannel = notificationUtils.getChannelForIncomingCall(fromBg)
         val ringerMode = audioManager?.ringerMode
+        Timber.e("RING_DEBUG ringerMode=$ringerMode")
         if (ringerMode == AudioManager.RINGER_MODE_NORMAL) {
             playRingtoneIfNeeded(incomingCallChannel, customToneUri)
         } else if (ringerMode == AudioManager.RINGER_MODE_VIBRATE) {
@@ -73,8 +52,9 @@ class CallRingPlayerIncoming(
     }
 
     private fun playRingtoneIfNeeded(incomingCallChannel: NotificationChannel?, customToneUri: Uri?) {
+        Timber.e("RING_DEBUG playRingtoneIfNeeded ringPlayer=$ringPlayer")
         if (ringPlayer != null) {
-            Timber.v("Ringtone already playing — skipping restart")
+            Timber.e("RING_DEBUG skipping — already playing")
             return
         }
         ringCyclesPlayed = 0
@@ -107,6 +87,7 @@ class CallRingPlayerIncoming(
             player.setOnCompletionListener {
                 val current = ringPlayer ?: return@setOnCompletionListener
                 ringCyclesPlayed += 1
+                Timber.e("RING_DEBUG cycle completed: $ringCyclesPlayed / $RING_CYCLES")
                 if (ringCyclesPlayed < RING_CYCLES) {
                     try {
                         current.seekTo(0)
@@ -155,12 +136,12 @@ class CallRingPlayerIncoming(
 
     // FIXED — always releases even if stop() throws
     fun stop() {
+        Timber.e("RING_DEBUG stop() called from: ${Thread.currentThread().stackTrace.take(8).joinToString("\n")}")
         ringPlayer?.release()
         ringPlayer = null
         ringCyclesPlayed = 0
         vibrator?.cancel()
         vibrator = null
-        // Abandon audio focus
         val audioManager = applicationContext.getSystemService<AudioManager>()
         @Suppress("DEPRECATION")
         audioManager?.abandonAudioFocus(null)
