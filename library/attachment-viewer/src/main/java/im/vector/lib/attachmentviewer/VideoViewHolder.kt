@@ -22,14 +22,7 @@ class VideoViewHolder constructor(itemView: View) :
     private var mVideoPath: String? = null
     private var countUpTimer: CountUpTimer? = null
     private var progress: Int = 0
-    private var wasPaused = false
     private var pendingPlay = false
-    private var hasStartedPlayback = false
-
-    // Single source of truth for "is the MediaPlayer instance actually prepared
-    // and safe to start()/pause()/seek right now". hasStartedPlayback only tracks
-    // "we attempted/initiated playback", which is NOT the same thing and was the
-    // root cause of stale-state requiring multiple clicks to resume.
     private var isPrepared = false
 
     var eventListener: WeakReference<AttachmentEventListener>? = null
@@ -44,9 +37,7 @@ class VideoViewHolder constructor(itemView: View) :
         mVideoPath = null
         isSelected = false
         pendingPlay = false
-        wasPaused = false
         progress = 0
-        hasStartedPlayback = false
         isPrepared = false
         views.videoSeekBar.isVisible = true
         views.videoSeekBar.setOnSeekBarChangeListener(null)
@@ -77,13 +68,10 @@ class VideoViewHolder constructor(itemView: View) :
     }
 
     override fun entersBackground() {
-        if (views.videoView.isPlaying) {
+        if (isPrepared && views.videoView.isPlaying) {
             progress = views.videoView.currentPosition
-            stopTimer()
-            views.videoView.stopPlayback()
             views.videoView.pause()
-            hasStartedPlayback = false
-            isPrepared = false
+            stopTimer()
         }
     }
 
@@ -92,9 +80,6 @@ class VideoViewHolder constructor(itemView: View) :
         onOrientationChanged()
     }
 
-    // Call this from the activity/fragment's onConfigurationChanged so the
-    // seekbar visibility re-evaluates immediately on rotation, without
-    // waiting for the next CountUpTimer tick.
     fun onOrientationChanged() {
         views.videoSeekBar.isVisible = true
     }
@@ -103,27 +88,19 @@ class VideoViewHolder constructor(itemView: View) :
             itemView.resources.configuration.orientation == android.content.res.Configuration.ORIENTATION_LANDSCAPE
 
     override fun onSelected(selected: Boolean) {
-        // Guard against redundant/duplicate selection callbacks (e.g. ViewPager
-        // settle firing true then false back-to-back), which causes playback
-        // to start then immediately pause.
         if (isSelected == selected) return
         isSelected = selected
         if (!selected) {
-            if (views.videoView.isPlaying) {
+            if (isPrepared && views.videoView.isPlaying) {
                 progress = views.videoView.currentPosition
                 views.videoView.pause()
-                views.videoView.stopPlayback()
-            } else {
-                progress = 0
             }
-            hasStartedPlayback = false
-            isPrepared = false
             views.videoSeekBar.isVisible = true
             stopTimer()
         } else {
-            if (mVideoPath != null) {
+            if (!isPrepared && mVideoPath != null) {
                 startPlaying()
-            } else {
+            } else if (!isPrepared) {
                 pendingPlay = true
                 views.videoLoaderProgress.isVisible = true
             }
@@ -131,10 +108,7 @@ class VideoViewHolder constructor(itemView: View) :
     }
 
     private fun startPlaying() {
-        hasStartedPlayback = true
         isPrepared = false
-        wasPaused = false
-        // Keep thumbnail visible — don't hide it yet, avoid black flash
         views.videoLoaderProgress.isVisible = true
         views.videoControlIcon.isVisible = false
         views.videoMediaViewerErrorView.isVisible = false
@@ -148,7 +122,6 @@ class VideoViewHolder constructor(itemView: View) :
 
         views.videoView.setOnCompletionListener {
             views.videoView.stopPlayback()
-            hasStartedPlayback = false
             isPrepared = false
             stopTimer()
             views.videoThumbnailImage.isVisible = true
@@ -163,7 +136,6 @@ class VideoViewHolder constructor(itemView: View) :
             Log.e(VideoViewHolder::class.java.name, "MediaPlayer error: what=$what extra=$extra path=$mVideoPath")
             stopTimer()
             isPrepared = false
-            hasStartedPlayback = false
             views.videoView.isVisible = false
             views.videoThumbnailImage.isVisible = false
             views.videoControlIcon.isVisible = false
@@ -175,15 +147,12 @@ class VideoViewHolder constructor(itemView: View) :
         }
 
         views.videoView.setOnPreparedListener { mp ->
-            isPrepared = true // real readiness is marked here, not earlier
+            isPrepared = true
             views.videoSeekBar.max = mp.duration
-            views.videoSeekBar.isVisible = true
             views.videoView.visibility = View.VISIBLE
             views.videoView.translationZ = 0f
             views.videoView.elevation = 0f
             views.videoLoaderProgress.isVisible = false
-
-            views.videoSeekBar.max = mp.duration
             views.videoSeekBar.isVisible = isLandscapeOrientation()
             views.videoSeekBar.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: android.widget.SeekBar?, value: Int, fromUser: Boolean) {
@@ -196,32 +165,15 @@ class VideoViewHolder constructor(itemView: View) :
                 override fun onStopTrackingTouch(seekBar: android.widget.SeekBar?) = Unit
             })
 
-            stopTimer()
-            countUpTimer = CountUpTimer(intervalInMs = 100).also {
-                it.tickListener = CountUpTimer.TickListener {
-                    val duration = views.videoView.duration
-                    val currentProgress = views.videoView.currentPosition
-                    val isPlaying = views.videoView.isPlaying
-                    views.videoSeekBar.progress = currentProgress
-                    eventListener?.get()?.onEvent(
-                            AttachmentEvents.VideoEvent(isPlaying, currentProgress, duration)
-                    )
-                }
-                it.start()
+            views.videoView.start()
+            if (progress > 0) {
+                views.videoView.seekTo(progress)
             }
-            if (!wasPaused) {
-                views.videoView.start()
-                if (progress > 0) {
-                    views.videoView.seekTo(progress)
-                }
-                // Delay hiding thumbnail slightly so first decoded frame is ready,
-                // avoiding a black flash between thumbnail-hide and first-frame-render.
-                views.videoView.postDelayed({
-                    views.videoThumbnailImage.isVisible = false
-                }, 150L)
-            } else {
+            startTimer()
+            views.videoView.postDelayed({
                 views.videoThumbnailImage.isVisible = false
-            }
+            }, 150L)
+
             eventListener?.get()?.onEvent(
                     AttachmentEvents.VideoEvent(views.videoView.isPlaying, views.videoView.currentPosition, mp.duration)
             )
@@ -237,7 +189,6 @@ class VideoViewHolder constructor(itemView: View) :
         } catch (failure: Throwable) {
             Log.v(VideoViewHolder::class.java.name, "Failed to start video: ${failure.message}")
             isPrepared = false
-            hasStartedPlayback = false
             views.videoView.isVisible = false
             views.videoThumbnailImage.isVisible = false
             views.videoControlIcon.isVisible = false
@@ -247,25 +198,71 @@ class VideoViewHolder constructor(itemView: View) :
         }
     }
 
+    private fun startTimer() {
+        stopTimer()
+        countUpTimer = CountUpTimer(intervalInMs = 100).also {
+            it.tickListener = CountUpTimer.TickListener {
+                val duration = views.videoView.duration
+                val currentProgress = views.videoView.currentPosition
+                val playing = views.videoView.isPlaying
+                views.videoSeekBar.progress = currentProgress
+                eventListener?.get()?.onEvent(AttachmentEvents.VideoEvent(playing, currentProgress, duration))
+            }
+            it.start()
+        }
+    }
+
     private fun stopTimer() {
         countUpTimer?.stop()
         countUpTimer = null
+    }
+
+    // Shared, fully-guarded resume logic used by BOTH the small in-video icon
+    // (via togglePlayPause) and the big overlay icon (via handleCommand).
+    // Previously handleCommand called views.videoView.start() directly with
+    // no safety checks, so the overlay's big button never benefited from the
+    // surface-validity/verify-it-actually-started fixes added to togglePlayPause.
+    private fun resumePlayback() {
+        val surfaceValid = views.videoView.holder?.surface?.isValid == true
+        Log.d("VideoViewHolder", "resumePlayback: surfaceValid=$surfaceValid at ${System.currentTimeMillis()}")
+        if (surfaceValid) {
+            views.videoView.start()
+            startTimer()
+            views.videoControlIcon.isVisible = false
+            views.videoView.postDelayed({
+                if (!views.videoView.isPlaying) {
+                    Log.w("VideoViewHolder", "start() did not actually resume playback — forcing re-prepare")
+                    isPrepared = false
+                    views.videoControlIcon.isVisible = false
+                    startPlaying()
+                }
+            }, 300L)
+        } else {
+            Log.w("VideoViewHolder", "Resume requested but surface invalid — re-preparing instead of start()")
+            isPrepared = false
+            views.videoControlIcon.isVisible = false
+            startPlaying()
+        }
     }
 
     override fun handleCommand(commands: AttachmentCommands) {
         if (!isSelected) return
         when (commands) {
             AttachmentCommands.StartVideo -> {
-                wasPaused = false
-                hasStartedPlayback = true
-                views.videoView.start()
-                views.videoControlIcon.isVisible = false
+                if (isPrepared) {
+                    resumePlayback()
+                }
             }
             AttachmentCommands.PauseVideo -> {
-                wasPaused = true
-                views.videoView.pause()
-                views.videoControlIcon.isVisible = true
-                views.videoControlIcon.setImageResource(R.drawable.ic_play_arrow)
+                if (isPrepared) {
+                    views.videoView.pause()
+                    stopTimer()
+                    views.videoControlIcon.isVisible = true
+                    views.videoControlIcon.setImageResource(R.drawable.ic_play_arrow)
+                    eventListener?.get()?.onEvent(
+                            AttachmentEvents.VideoEvent(false, views.videoView.currentPosition, views.videoView.duration)
+                    )
+                }
             }
             is AttachmentCommands.SeekTo -> {
                 val duration = views.videoView.duration
@@ -279,46 +276,35 @@ class VideoViewHolder constructor(itemView: View) :
     }
 
     private fun togglePlayPause() {
-        when {
-            isPrepared && views.videoView.isPlaying -> {
-                wasPaused = true
-                progress = views.videoView.currentPosition
-                views.videoView.pause()
-                views.videoControlIcon.isVisible = true
-                views.videoControlIcon.setImageResource(R.drawable.ic_play_arrow)
-            }
-            isPrepared && mVideoPath != null -> {
-                wasPaused = false
-                views.videoControlIcon.isVisible = false // hide immediately on tap, don't wait for next frame
-                views.videoView.start()
-            }
-            mVideoPath != null -> {
-                views.videoControlIcon.isVisible = false // immediate feedback that the tap registered
+        Log.d("VideoViewHolder", "togglePlayPause ENTERED at ${System.currentTimeMillis()}, isPlaying=${views.videoView.isPlaying}, isPrepared=$isPrepared")
+        if (!isPrepared) {
+            if (mVideoPath != null) {
                 startPlaying()
-            }
-            else -> {
+            } else {
                 pendingPlay = true
-                views.videoControlIcon.isVisible = false
-                views.videoLoaderProgress.isVisible = true
             }
+            return
+        }
+        if (views.videoView.isPlaying) {
+            views.videoView.pause()
+            stopTimer()
+            progress = views.videoView.currentPosition
+            views.videoControlIcon.isVisible = true
+            views.videoControlIcon.setImageResource(R.drawable.ic_play_arrow)
+        } else {
+            resumePlayback()
         }
     }
 
     override fun bind(attachmentInfo: AttachmentInfo) {
         super.bind(attachmentInfo)
-        progress = 0
-        wasPaused = false
         pendingPlay = false
-        hasStartedPlayback = false
-        isPrepared = false
         views.videoControlIcon.isVisible = true
         views.videoSeekBar.isVisible = true
-        views.videoSeekBar.progress = 0
-        views.videoControlIcon.setImageResource(R.drawable.ic_play_arrow)
 
         val tapListener = View.OnClickListener { togglePlayPause() }
         views.videoControlIcon.setOnClickListener(tapListener)
         views.videoThumbnailImage.setOnClickListener(tapListener)
-        views.videoView.setOnClickListener(tapListener) // surface stays tappable after thumbnail is gone
+        views.videoView.setOnClickListener(tapListener)
     }
 }

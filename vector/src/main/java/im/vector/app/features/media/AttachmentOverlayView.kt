@@ -162,25 +162,26 @@ class AttachmentOverlayView @JvmOverloads constructor(
     override fun onEvent(event: AttachmentEvents) {
         when (event) {
             is AttachmentEvents.VideoEvent -> {
+                val wasPlaying = isPlaying
+                isPlaying = event.isPlaying
+                views.overlayPlayPauseButton.setImageResource(
+                        if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play_arrow
+                )
+
                 if (!suspendSeekBarUpdate) {
                     val safeDuration = (if (event.duration == 0) 100 else event.duration).toFloat()
                     val percent = ((event.progress / safeDuration) * 100f).toInt().coerceAtMost(100)
-                    val wasPlaying = isPlaying
-                    isPlaying = event.isPlaying
-                    views.overlayPlayPauseButton.setImageResource(
-                            if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play_arrow
-                    )
-                    when {
-                        !wasPlaying && isPlaying -> {
-                            // Just started/resumed playing: show briefly, then auto-hide.
-                            showControls()
-                            scheduleHideControls()
-                        }
-                        wasPlaying && !isPlaying -> {
-                            // Just paused: cancel any pending auto-hide, keep controls up.
-                            cancelHideControls()
-                            showControls()
-                        }
+                    // seekbar progress update here if applicable
+                }
+
+                when {
+                    !wasPlaying && isPlaying -> {
+                        showControls()
+                        scheduleHideControls()
+                    }
+                    wasPlaying && !isPlaying -> {
+                        cancelHideControls()
+                        showControls()
                     }
                 }
             }

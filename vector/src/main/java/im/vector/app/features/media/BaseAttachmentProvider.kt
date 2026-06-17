@@ -41,6 +41,10 @@ abstract class BaseAttachmentProvider<Type>(
 ) : AttachmentSourceProvider {
 
     var interactionListener: AttachmentInteractionListener? = null
+        set(value) {
+            field = value
+            overlayView?.interactionListener = value
+        }
 
     private var overlayView: AttachmentOverlayView? = null
 

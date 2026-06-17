@@ -90,6 +90,13 @@ abstract class AttachmentViewerActivity : AppCompatActivity(), AttachmentEventLi
                     onSelectedPositionChanged(position)
                 }
             })
+            // ViewPager2 does not fire onPageSelected for the initial page, so the
+            // first video/image never receives onSelected(true) and stays unselected
+            // until the user swipes away and back. Force-select once the pager has
+            // settled on its starting position.
+            post {
+                onSelectedPositionChanged(currentItem)
+            }
         }
 
         directionDetector = createSwipeDirectionDetector()
