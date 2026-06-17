@@ -132,14 +132,14 @@ class VideoViewHolder constructor(itemView: View) :
 
     private fun startPlaying() {
         hasStartedPlayback = true
-        isPrepared = false // not actually prepared yet — only set true in setOnPreparedListener
-        wasPaused = false // reset stale pause flag so setOnPreparedListener actually starts playback
-        views.videoThumbnailImage.isVisible = false
+        isPrepared = false
+        wasPaused = false
+        // Keep thumbnail visible — don't hide it yet, avoid black flash
         views.videoLoaderProgress.isVisible = true
         views.videoControlIcon.isVisible = false
         views.videoMediaViewerErrorView.isVisible = false
         views.videoView.visibility = View.VISIBLE
-        views.videoSeekBar.isVisible = true // hidden until prepared, then shown in setOnPreparedListener if landscape
+        views.videoSeekBar.isVisible = true
         setVideoAndPlay()
     }
 
@@ -214,6 +214,13 @@ class VideoViewHolder constructor(itemView: View) :
                 if (progress > 0) {
                     views.videoView.seekTo(progress)
                 }
+                // Delay hiding thumbnail slightly so first decoded frame is ready,
+                // avoiding a black flash between thumbnail-hide and first-frame-render.
+                views.videoView.postDelayed({
+                    views.videoThumbnailImage.isVisible = false
+                }, 150L)
+            } else {
+                views.videoThumbnailImage.isVisible = false
             }
             eventListener?.get()?.onEvent(
                     AttachmentEvents.VideoEvent(views.videoView.isPlaying, views.videoView.currentPosition, mp.duration)
@@ -273,7 +280,6 @@ class VideoViewHolder constructor(itemView: View) :
 
     private fun togglePlayPause() {
         when {
-            // Currently playing -> pause immediately.
             isPrepared && views.videoView.isPlaying -> {
                 wasPaused = true
                 progress = views.videoView.currentPosition
@@ -281,18 +287,18 @@ class VideoViewHolder constructor(itemView: View) :
                 views.videoControlIcon.isVisible = true
                 views.videoControlIcon.setImageResource(R.drawable.ic_play_arrow)
             }
-            // Already prepared, just paused -> resume immediately, same player instance.
             isPrepared && mVideoPath != null -> {
                 wasPaused = false
+                views.videoControlIcon.isVisible = false // hide immediately on tap, don't wait for next frame
                 views.videoView.start()
-                views.videoControlIcon.isVisible = false
             }
-            // Not prepared (first play, or player was torn down by onSelected/entersBackground) -> re-prepare.
             mVideoPath != null -> {
+                views.videoControlIcon.isVisible = false // immediate feedback that the tap registered
                 startPlaying()
             }
             else -> {
                 pendingPlay = true
+                views.videoControlIcon.isVisible = false
                 views.videoLoaderProgress.isVisible = true
             }
         }
@@ -308,12 +314,11 @@ class VideoViewHolder constructor(itemView: View) :
         views.videoControlIcon.isVisible = true
         views.videoSeekBar.isVisible = true
         views.videoSeekBar.progress = 0
-        // Don't query views.videoView.isPlaying here — at bind time playback
-        // hasn't started yet, this was always false/stale and just added
-        // an unnecessary (and sometimes slow) IPC call into MediaPlayer.
         views.videoControlIcon.setImageResource(R.drawable.ic_play_arrow)
 
-        views.videoControlIcon.setOnClickListener { togglePlayPause() }
-        views.videoThumbnailImage.setOnClickListener { togglePlayPause() }
+        val tapListener = View.OnClickListener { togglePlayPause() }
+        views.videoControlIcon.setOnClickListener(tapListener)
+        views.videoThumbnailImage.setOnClickListener(tapListener)
+        views.videoView.setOnClickListener(tapListener) // surface stays tappable after thumbnail is gone
     }
 }

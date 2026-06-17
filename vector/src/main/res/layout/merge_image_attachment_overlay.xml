@@ -117,12 +117,12 @@
         app:layout_constraintBottom_toBottomOf="parent" />
     <ImageView
         android:id="@+id/overlayPlayPauseButton"
-        android:layout_width="256dp"
-        android:layout_height="256dp"
+        android:layout_width="64dp"
+        android:layout_height="64dp"
         android:clickable="true"
         android:contentDescription="@string/action_play"
         android:focusable="true"
-        android:padding="28dp"
+        android:padding="12dp"
         android:scaleType="centerInside"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"

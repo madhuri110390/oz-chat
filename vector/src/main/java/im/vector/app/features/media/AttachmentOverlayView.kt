@@ -33,12 +33,16 @@ class AttachmentOverlayView @JvmOverloads constructor(
     private var hideControlsRunnable: Runnable? = null
     private var isVideoAttachment = false
 
-    private val controlViews get() = listOf(
+    // Only the center play/pause button auto-hides during playback.
+    private val playbackControlViews get() = listOf(
+            views.overlayPlayPauseButton,
+    )
+
+    // Back/share/download stay visible at all times, regardless of play state.
+    private val topBarViews get() = listOf(
             views.overlayBackButton,
             views.overlayShareButton,
             views.overlayDownloadButton,
-            views.overlayPlayPauseButton,
-
     )
 
     init {
@@ -72,23 +76,31 @@ class AttachmentOverlayView @JvmOverloads constructor(
 //        })
 
         setOnClickListener {
-            Log.d("OVERLAY_TAP", "overlay root tapped, groupVisible=${views.overlayVideoControlsGroup.visibility == View.VISIBLE}, isVideoAttachment=$isVideoAttachment")
             if (!isVideoAttachment) return@setOnClickListener
             val controlsVisible = views.overlayVideoControlsGroup.visibility == View.VISIBLE
             if (controlsVisible) {
-                hideControlsNow()
+                if (isPlaying) {
+                    // Tapping while playing hides playback controls immediately (like YouTube).
+                    hideControlsNow()
+                }
+                // Tapping while paused: controls already visible, do nothing.
             } else {
                 showControls()
                 if (isPlaying) scheduleHideControls()
+                // If paused, controls stay up indefinitely (no scheduleHideControls call).
             }
         }
     }
 
     fun setIsVideo(isVideo: Boolean) {
         isVideoAttachment = isVideo
+        // Top bar (back/share/download) is always visible, video or not.
+        topBarViews.forEach { it.alpha = 1f; it.visibility = View.VISIBLE }
         if (isVideo) {
-            showControls()
-            scheduleHideControls()
+            // Don't auto-schedule a hide here — we don't know play state yet.
+            // onEvent(VideoEvent) will drive playback-control visibility once playback starts.
+            views.overlayVideoControlsGroup.visibility = View.VISIBLE
+            playbackControlViews.forEach { it.alpha = 1f; it.visibility = View.VISIBLE }
         } else {
             cancelHideControls()
             views.overlayVideoControlsGroup.visibility = View.GONE
@@ -112,7 +124,7 @@ class AttachmentOverlayView @JvmOverloads constructor(
     private fun showControls() {
         cancelHideControls()
         views.overlayVideoControlsGroup.visibility = View.VISIBLE
-        controlViews.forEach {
+        playbackControlViews.forEach {
             it.animate().cancel()
             it.alpha = 0f
             it.visibility = View.VISIBLE
@@ -122,7 +134,7 @@ class AttachmentOverlayView @JvmOverloads constructor(
 
     private fun hideControlsNow() {
         cancelHideControls()
-        controlViews.forEach {
+        playbackControlViews.forEach {
             it.animate().cancel()
             it.animate().alpha(0f).setDuration(200).withEndAction {
                 views.overlayVideoControlsGroup.visibility = View.GONE
@@ -155,17 +167,20 @@ class AttachmentOverlayView @JvmOverloads constructor(
                     val percent = ((event.progress / safeDuration) * 100f).toInt().coerceAtMost(100)
                     val wasPlaying = isPlaying
                     isPlaying = event.isPlaying
-//                    views.overlaySeekBar.progress = percent
                     views.overlayPlayPauseButton.setImageResource(
                             if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play_arrow
                     )
-                    if (!wasPlaying && isPlaying) {
-                        showControls()
-                        scheduleHideControls()
-                    }
-                    if (wasPlaying && !isPlaying) {
-                        cancelHideControls()
-                        showControls()
+                    when {
+                        !wasPlaying && isPlaying -> {
+                            // Just started/resumed playing: show briefly, then auto-hide.
+                            showControls()
+                            scheduleHideControls()
+                        }
+                        wasPlaying && !isPlaying -> {
+                            // Just paused: cancel any pending auto-hide, keep controls up.
+                            cancelHideControls()
+                            showControls()
+                        }
                     }
                 }
             }

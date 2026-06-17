@@ -98,7 +98,6 @@ abstract class MessageImageVideoItem : AbsMessageItem<MessageImageVideoItem.Hold
 
         // Initial play button visibility
         holder.playContentView.visibility = when {
-            isPlaying -> View.GONE                                       // already playing, survive rotation
             playable && isImageMessage && autoplayAnimatedImages -> View.GONE
             playable -> View.VISIBLE
             else -> View.GONE
@@ -113,8 +112,6 @@ abstract class MessageImageVideoItem : AbsMessageItem<MessageImageVideoItem.Hold
                 tapJob = null
             } else {
                 tapJob = Runnable {
-                    isPlaying = true
-                    holder.playContentView.visibility = View.GONE
                     clickListener?.invoke(holder.imageView)
                 }.also { job ->
                     holder.playContentView.postDelayed(job, 300L)
@@ -199,7 +196,6 @@ abstract class MessageImageVideoItem : AbsMessageItem<MessageImageVideoItem.Hold
         hideControlsRunnable?.let { holder.playContentView.removeCallbacks(it) }
         hideControlsRunnable = null
         imageContentRenderer.clear(holder.imageView)
-        isPlaying = false
         holder.imageView.visibility = View.VISIBLE
         holder.playContentView.visibility = View.GONE
         contentUploadStateTrackerBinder.unbind(attributes.informationData.eventId)
