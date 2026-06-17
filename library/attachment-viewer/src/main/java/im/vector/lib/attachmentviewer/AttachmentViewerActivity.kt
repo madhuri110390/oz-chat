@@ -67,7 +67,7 @@ abstract class AttachmentViewerActivity : AppCompatActivity(), AttachmentEventLi
     private var isSwipeToDismissAllowed: Boolean = true
     private var isOverlayWasClicked = false
     private var isImagePagerIdle = true
-
+    private var lastEventConsumedByOverlay = false
     fun setSourceProvider(sourceProvider: AttachmentSourceProvider) {
         attachmentsAdapter.attachmentSourceProvider = sourceProvider
     }
@@ -155,16 +155,18 @@ abstract class AttachmentViewerActivity : AppCompatActivity(), AttachmentEventLi
     // Without this override, single taps never reached onSingleTapConfirmed,
     // so the overlay (back button, play/pause, etc.) could never be toggled
     // back on once hidden.
+
+
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
         if (overlayView?.isVisible == true &&
                 overlayView?.dispatchTouchEvent(ev) == true) {
+            lastEventConsumedByOverlay = true
             return true
         }
+        lastEventConsumedByOverlay = false
 
         handleUpDownEvent(ev)
 
-        // Multi-finger gestures (pinch-to-zoom) go straight to the pager so the
-        // zoomable image/video surface inside it receives them correctly.
         if (ev.pointerCount > 1 || wasScaled) {
             wasScaled = true
             return views.attachmentPager.dispatchTouchEvent(ev)
@@ -189,13 +191,13 @@ abstract class AttachmentViewerActivity : AppCompatActivity(), AttachmentEventLi
         wasScaled = false
         views.attachmentPager.dispatchTouchEvent(event)
         swipeDismissHandler.onTouch(views.rootContainer, event)
-        isOverlayWasClicked = dispatchOverlayTouch(event)
+        isOverlayWasClicked = lastEventConsumedByOverlay
     }
 
     private fun handleEventActionUp(event: MotionEvent) {
         swipeDismissHandler.onTouch(views.rootContainer, event)
         views.attachmentPager.dispatchTouchEvent(event)
-        isOverlayWasClicked = dispatchOverlayTouch(event)
+        isOverlayWasClicked = lastEventConsumedByOverlay
     }
 
     private fun handleSingleTap(event: MotionEvent, isOverlayWasClicked: Boolean) {
