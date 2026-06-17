@@ -25,6 +25,13 @@ class CallAudioManager(private val context: Context, val configChange: (() -> Un
     private var audioDeviceDetector: AudioDeviceDetector? = null
     private var audioDeviceRouter: AudioDeviceRouter? = null
 
+    // Tracks whether we're in the ringing (incoming) or dialing (outgoing) phase.
+    // While true, we must not let the router touch audioManager.mode, since that
+    // would stomp MODE_RINGTONE / dial-tone mode and kill the ringtone/dial tone
+    // the moment the user toggles speaker/earpiece before the call connects.
+    @Volatile
+    private var isRingingOrDialing: Boolean = false
+
     sealed class Device(@StringRes val titleRes: Int, @DrawableRes val drawableRes: Int) {
         object Phone : Device(CommonStrings.sound_device_phone, R.drawable.ic_sound_device_phone)
         object Speaker : Device(CommonStrings.sound_device_speaker, R.drawable.ic_sound_device_speaker)
@@ -50,7 +57,6 @@ class CallAudioManager(private val context: Context, val configChange: (() -> Un
     init {
         runInAudioThread { setup() }
     }
-    // Add to CallAudioManager.kt
 
     private fun setup() {
         if (audioManager == null) {
@@ -85,7 +91,19 @@ class CallAudioManager(private val context: Context, val configChange: (() -> Un
             if (mode != Mode.DEFAULT) {
                 Timber.i("User selected device set to: $device")
                 userSelectedDevice = device
-                updateAudioRoute(mode, false)
+
+                if (isRingingOrDialing) {
+                    // Don't run the full updateAudioRoute() here: it calls
+                    // audioDeviceRouter.setMode(mode), which flips audioManager.mode
+                    // away from MODE_RINGTONE / dial-tone mode and kills the
+                    // ringtone or dial tone. Just switch the stream route.
+                    selectedDevice = device
+                    Timber.i("Switching stream route during ring/dial (mode untouched): $device")
+                    audioDeviceRouter?.setAudioRoute(device)
+                    configChange?.invoke()
+                } else {
+                    updateAudioRoute(mode, false)
+                }
             }
         })
     }
@@ -121,9 +139,17 @@ class CallAudioManager(private val context: Context, val configChange: (() -> Un
      */
     private fun updateAudioRoute(mode: Mode, force: Boolean): Boolean {
         Timber.i("Update audio route for mode: $mode")
-        if (!audioDeviceRouter?.setMode(mode).orFalse()) {
-            return false
+
+        if (isRingingOrDialing) {
+            // Skip setMode() while ringing/dialing so we don't overwrite
+            // MODE_RINGTONE / dial-tone mode with the call-mode router's mode.
+            Timber.i("Skipping audioDeviceRouter.setMode() while ringing/dialing")
+        } else {
+            if (!audioDeviceRouter?.setMode(mode).orFalse()) {
+                return false
+            }
         }
+
         if (mode == Mode.DEFAULT) {
             selectedDevice = null
             userSelectedDevice = null
@@ -248,23 +274,40 @@ class CallAudioManager(private val context: Context, val configChange: (() -> Un
          */
         fun setMode(mode: Mode): Boolean
     }
+
+    /**
+     * Call this when an incoming call starts ringing, or an outgoing call
+     * starts dialing (before the call is answered/connected).
+     */
     fun startRingingAudioMode() {
         runInAudioThread {
+            isRingingOrDialing = true
             @Suppress("WrongConstant")
             audioManager?.mode = AudioManager.MODE_RINGTONE
             Timber.i("Audio mode set to RINGTONE for incoming call")
         }
     }
 
+    /**
+     * Call this when the ringing/dialing phase ends, i.e. the call connects,
+     * is rejected, or is cancelled.
+     */
     fun stopRingingAudioMode() {
         runInAudioThread {
+            isRingingOrDialing = false
             if (mode == Mode.DEFAULT) {
                 @Suppress("WrongConstant")
                 audioManager?.mode = AudioManager.MODE_NORMAL
                 Timber.i("Audio mode restored to NORMAL")
+            } else {
+                // Call just connected: now it's safe to let the router fully
+                // apply the call-mode routing (including audioManager.mode),
+                // picking up whatever device the user selected while ringing.
+                updateAudioRoute(mode, true)
             }
         }
     }
+
     companion object {
         // Every audio operations should be launched on single thread
         private val executor = Executors.newSingleThreadExecutor()

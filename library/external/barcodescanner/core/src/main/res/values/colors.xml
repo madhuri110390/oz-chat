@@ -3,4 +3,5 @@
     <color name="viewfinder_mask">#60000000</color>
     <color name="viewfinder_laser">#ffcc0000</color>
     <color name="viewfinder_border">#ffafed44</color>
+    <color name="videoPlayerAccentGreen">#1DB954</color>
 </resources>

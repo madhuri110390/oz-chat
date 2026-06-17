@@ -24,57 +24,64 @@ class DefaultAudioDeviceRouter(
 
     private var focusRequestCompat: AudioFocusRequestCompat? = null
 
-//    override fun setAudioRoute(device: CallAudioManager.Device) {
-//        @Suppress("DEPRECATION")
-//        audioManager.isSpeakerphoneOn = device is CallAudioManager.Device.Speaker
-//        setBluetoothAudioRoute(device is CallAudioManager.Device.WirelessHeadset)
-//    }
-@SuppressLint("WrongConstant")
-override fun setAudioRoute(device: CallAudioManager.Device) {
-    // Always set MODE_IN_COMMUNICATION when a route is active
-    audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
-    audioManager.isMicrophoneMute = false
+    @SuppressLint("WrongConstant")
+    override fun setAudioRoute(device: CallAudioManager.Device) {
+        // Always set MODE_IN_COMMUNICATION when a route is active
+        audioManager.mode = AudioManager.MODE_IN_COMMUNICATION
+        audioManager.isMicrophoneMute = false
 
-    when (device) {
-        is CallAudioManager.Device.WirelessHeadset -> {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                @Suppress("DEPRECATION")
-                audioManager.isSpeakerphoneOn = false
-            } else {
-                @Suppress("DEPRECATION")
-                audioManager.isSpeakerphoneOn = false
+        // Tear down whatever route is currently active FIRST, before enabling the
+        // new one. Without this, the old route (e.g. earpiece) and the new route
+        // (e.g. speaker) can both be briefly active at once, which is what causes
+        // a continuous tone (ringback/dial tone) to sound like it plays twice or
+        // from two places during a Phone <-> Speaker switch.
+        clearCurrentRoute()
+
+        when (device) {
+            is CallAudioManager.Device.WirelessHeadset -> {
+                setBluetoothAudioRoute(true)
             }
-            setBluetoothAudioRoute(true)
-        }
 
-        is CallAudioManager.Device.Speaker -> {
-            setBluetoothAudioRoute(false)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                audioManager.availableCommunicationDevices
-                        .firstOrNull { it.type == android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
-                        ?.let { audioManager.setCommunicationDevice(it) }
-            } else {
-                @Suppress("DEPRECATION")
-                audioManager.isSpeakerphoneOn = true
+            is CallAudioManager.Device.Speaker -> {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    audioManager.availableCommunicationDevices
+                            .firstOrNull { it.type == android.media.AudioDeviceInfo.TYPE_BUILTIN_SPEAKER }
+                            ?.let { audioManager.setCommunicationDevice(it) }
+                } else {
+                    @Suppress("DEPRECATION")
+                    audioManager.isSpeakerphoneOn = true
+                }
             }
-        }
 
-        else -> {
-            // Phone / Headset — route to earpiece, explicitly disable speaker
-            setBluetoothAudioRoute(false)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                audioManager.clearCommunicationDevice()
-                audioManager.availableCommunicationDevices
-                        .firstOrNull { it.type == android.media.AudioDeviceInfo.TYPE_BUILTIN_EARPIECE }
-                        ?.let { audioManager.setCommunicationDevice(it) }
-            } else {
-                @Suppress("DEPRECATION")
-                audioManager.isSpeakerphoneOn = false
+            else -> {
+                // Phone / Headset — route to earpiece
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    audioManager.availableCommunicationDevices
+                            .firstOrNull { it.type == android.media.AudioDeviceInfo.TYPE_BUILTIN_EARPIECE }
+                            ?.let { audioManager.setCommunicationDevice(it) }
+                } else {
+                    @Suppress("DEPRECATION")
+                    audioManager.isSpeakerphoneOn = false
+                }
             }
         }
     }
-}
 
+    /**
+     * Disables every possible output route (Bluetooth, speakerphone flag, and the
+     * SDK 31+ communication device) before a new route is enabled. This prevents
+     * the old and new route being briefly active simultaneously during a switch.
+     */
+    @SuppressLint("WrongConstant")
+    private fun clearCurrentRoute() {
+        setBluetoothAudioRoute(false)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            audioManager.clearCommunicationDevice()
+        } else {
+            @Suppress("DEPRECATION")
+            audioManager.isSpeakerphoneOn = false
+        }
+    }
 
     @SuppressLint("WrongConstant")
     override fun setMode(mode: CallAudioManager.Mode): Boolean {

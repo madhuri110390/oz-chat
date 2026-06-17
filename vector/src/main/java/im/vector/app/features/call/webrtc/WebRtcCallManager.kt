@@ -238,10 +238,11 @@ class WebRtcCallManager @Inject constructor(
         Timber.tag(loggerTag.value).v("WebRtcPeerConnectionManager onCall active: ${call.mxCall.callId}")
         val currentCall = getCurrentCall().takeIf { it != call }
         currentCall?.updateRemoteOnHold(onHold = true)
+        audioManager.stopRingingAudioMode()   // ADD THIS — call connected, leaving ring/dial phase
         audioManager.setMode(if (call.mxCall.isVideoCall) CallAudioManager.Mode.VIDEO_CALL else CallAudioManager.Mode.AUDIO_CALL)
         call.trackCallStarted()
         this.currentCall.setAndNotify(call)
-        connectedCallIds.add(call.mxCall.callId)  // ← ADD THIS LINE ONLY
+        connectedCallIds.add(call.mxCall.callId)
     }
 
     private fun onCallEnded(callId: String, endCallReason: EndCallReason, rejected: Boolean) {
@@ -249,6 +250,7 @@ class WebRtcCallManager @Inject constructor(
         val webRtcCall = callsByCallId.remove(callId) ?: return Unit.also {
             Timber.tag(loggerTag.value).v("On call ended for unknown call $callId")
         }
+        audioManager.stopRingingAudioMode()   // ADD THIS — safety net if call ends while ringing/dialing
         CallForegroundService.stop(context)
         // DO NOT call incomingCallRinger.stop() here — owned by CallAndroidService
 
@@ -329,6 +331,7 @@ class WebRtcCallManager @Inject constructor(
         val mxCall = currentSession?.callSignalingService()?.createOutgoingCall(signalingRoomId, otherUserId, isVideoCall) ?: return
         val webRtcCall = createWebRtcCall(mxCall, nativeRoomId)
         currentCall.setAndNotify(webRtcCall)
+        audioManager.startRingingAudioMode()
         if (transferee != null) {
             transferees[webRtcCall.callId] = transferee
         }
@@ -400,6 +403,7 @@ class WebRtcCallManager @Inject constructor(
         createWebRtcCall(mxCall, nativeRoomId).apply {
             offerSdp = callInviteContent.offer
         }
+        audioManager.startRingingAudioMode()
         CallAndroidService.onIncomingCallRinging(
                 context = context,
                 callId = mxCall.callId,

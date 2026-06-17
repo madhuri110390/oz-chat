@@ -479,6 +479,8 @@ abstract class AttachmentViewerActivity : AppCompatActivity(), AttachmentEventLi
         }
         currentPosition = position
         overlayView = attachmentsAdapter.attachmentSourceProvider?.overlayViewAtPosition(this, position)
+        overlayView?.isVisible = true
+        systemUiVisibility = true
     }
 
     override fun onPause() {
@@ -492,16 +494,18 @@ abstract class AttachmentViewerActivity : AppCompatActivity(), AttachmentEventLi
     }
 
     private fun handleSingleTap(event: MotionEvent, isOverlayWasClicked: Boolean) {
-        if (!isOverlayWasClicked) {
-            if (overlayView != null) {
-                toggleOverlayViewVisibility()
-            }
+        if (!isOverlayWasClicked && overlayView != null) {
+            toggleOverlayViewVisibility()
         }
     }
 
     private fun toggleOverlayViewVisibility() {
         TransitionManager.beginDelayedTransition(views.rootContainer)
-        hideSystemUI()
+        if (systemUiVisibility) {
+            hideSystemUI()
+        } else {
+            showSystemUI()
+        }
     }
 
     private fun handleSwipeViewMove(translationY: Float, translationLimit: Int) {
@@ -524,6 +528,7 @@ abstract class AttachmentViewerActivity : AppCompatActivity(), AttachmentEventLi
 
     private fun createGestureDetector() = GestureDetector(this, object : GestureDetector.SimpleOnGestureListener() {
         override fun onSingleTapConfirmed(e: MotionEvent): Boolean {
+            if (isImagePagerIdle) handleSingleTap(e, isOverlayWasClicked)
             return false
         }
     })
