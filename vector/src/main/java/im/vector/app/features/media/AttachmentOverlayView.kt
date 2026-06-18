@@ -52,11 +52,11 @@ class AttachmentOverlayView @JvmOverloads constructor(
         setBackgroundColor(Color.TRANSPARENT)
         isClickable = true
         isFocusable = true
-
+        views.overlayPlayPauseButton.setOnClickListener { togglePlayPause() }
         views.overlayBackButton.setOnClickListener { interactionListener?.onDismiss() }
         views.overlayShareButton.setOnClickListener { interactionListener?.onShare() }
         views.overlayDownloadButton.setOnClickListener { interactionListener?.onDownload() }
-        views.overlayPlayPauseButton.setOnClickListener { togglePlayPause() }
+
 
         // Tapping anywhere on the (video) overlay toggles play/pause, but only when
         // the tap doesn't land on the dedicated play/pause button (which has its own
@@ -65,12 +65,10 @@ class AttachmentOverlayView @JvmOverloads constructor(
         setOnClickListener {
             if (!isVideoAttachment) return@setOnClickListener
             if (views.overlayVideoControlsGroup.visibility != View.VISIBLE) {
-                // First tap: just reveal controls, video keeps playing.
                 showControls()
                 scheduleHideControls()
             } else {
-                // Controls already visible: this tap hides them again.
-                hideControlsNow()
+                hideControlsNow()    // <-- this branch runs on tap 1, not the reveal branch!
             }
         }
     }
@@ -81,14 +79,12 @@ class AttachmentOverlayView @JvmOverloads constructor(
      * tick), then notifies the listener exactly once.
      */
     private fun togglePlayPause() {
-        interactionListener?.onPlayPause()
-//        val requestedPlay = !isPlaying
-//        isPlaying = requestedPlay
-//        lastManualToggleAtMs = System.currentTimeMillis()  // <-- mark this as a fresh user action
-//        views.overlayPlayPauseButton.setImageResource(
-//                if (requestedPlay) R.drawable.ic_pause else R.drawable.ic_play_arrow
-//        )
-//        interactionListener?.onPlayPause(requestedPlay)
+        val requestedPlay = !isPlaying
+        isPlaying = requestedPlay
+        views.overlayPlayPauseButton.setImageResource(
+                if (requestedPlay) R.drawable.ic_pause else R.drawable.ic_play_arrow
+        )
+        interactionListener?.onPlayPause(requestedPlay)
     }
     fun setIsVideo(isVideo: Boolean) {
         isVideoAttachment = isVideo
