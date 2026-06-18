@@ -95,9 +95,11 @@ class VideoViewHolder constructor(itemView: View) :
                 progress = views.videoView.currentPosition
                 views.videoView.pause()
             }
+            views.videoView.isVisible = false
+            views.videoThumbnailImage.isVisible = true
             views.videoSeekBar.isVisible = true
             stopTimer()
-        } else {
+        }else {
             if (!isPrepared && mVideoPath != null) {
                 startPlaying()
             } else if (!isPrepared) {
@@ -111,7 +113,10 @@ class VideoViewHolder constructor(itemView: View) :
         isPrepared = false
         views.videoLoaderProgress.isVisible = true
         views.videoMediaViewerErrorView.isVisible = false
+        views.videoThumbnailImage.isVisible = true   // ✅ show thumbnail
         views.videoView.visibility = View.VISIBLE
+        // ✅ Force SurfaceView to render on top
+        views.videoView.setZOrderOnTop(true)
         views.videoSeekBar.isVisible = true
         setVideoAndPlay()
     }
@@ -176,9 +181,16 @@ class VideoViewHolder constructor(itemView: View) :
                 views.videoView.pause()
                 stopTimer()
             }
-            views.videoView.postDelayed({
-                views.videoThumbnailImage.isVisible = false
-            }, 150L)
+//            views.videoView.postDelayed({
+//                views.videoThumbnailImage.isVisible = false
+//            }, 150L)
+            // WITH this:
+            views.videoView.setOnInfoListener { _, what, _ ->
+                if (what == android.media.MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START) {
+                    views.videoThumbnailImage.isVisible = false
+                }
+                false
+            }
 
             eventListener?.get()?.onEvent(
                     AttachmentEvents.VideoEvent(views.videoView.isPlaying, views.videoView.currentPosition, mp.duration)
@@ -225,22 +237,10 @@ class VideoViewHolder constructor(itemView: View) :
     // Shared, fully-guarded resume logic. Verifies the surface is valid before
     // calling start(), and re-prepares if playback doesn't actually resume.
     private fun resumePlayback() {
-        val surfaceValid = views.videoView.holder?.surface?.isValid == true
-        if (surfaceValid) {
-            views.videoView.start()
-            startTimer()
-            views.videoView.postDelayed({
-                if (!views.videoView.isPlaying) {
-                    isPrepared = false
-                    startPlaying()
-                }
-            }, 300L)
-        } else {
-            isPrepared = false
-            startPlaying()
-        }
+        views.videoThumbnailImage.isVisible = true      // ✅ add
+        isPrepared = false
+        startPlaying()
     }
-
     override fun handleCommand(commands: AttachmentCommands) {
         android.util.Log.d("PauseDebug", "handleCommand($commands) isSelected=$isSelected isPrepared=$isPrepared")
         if (!isSelected) return

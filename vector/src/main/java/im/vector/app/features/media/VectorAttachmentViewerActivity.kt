@@ -134,9 +134,9 @@ class VectorAttachmentViewerActivity : AttachmentViewerActivity(), AttachmentInt
         if (savedInstanceState == null) {
             pager2.setCurrentItem(initialIndex, false)
             // The page change listener is not notified of the change...
-            pager2.post {
-                overlayView?.isVisible = false  // or however you access it
-            }
+//            pager2.post {
+//                pager2.setCurrentItem(initialIndex, false)  // or however you access it
+//            }
         }
 //        window.statusBarColor = android.graphics.Color.TRANSPARENT
 //        window.navigationBarColor = android.graphics.Color.TRANSPARENT

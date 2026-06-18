@@ -206,9 +206,15 @@ abstract class AttachmentViewerActivity : AppCompatActivity(), AttachmentEventLi
         swipeDismissHandler.onTouch(views.rootContainer, event)
     }
 
+    // WITH:
     private fun handleSingleTap(event: MotionEvent, isOverlayWasClicked: Boolean) {
         if (!isOverlayWasClicked && overlayView != null) {
-            toggleOverlayViewVisibility()
+            // Always show overlay on tap — let overlay's own click listener handle play/pause
+            if (!systemUiVisibility) {
+                showSystemUI()
+            }
+            // Forward tap to overlay so it can handle play/pause on second tap
+            overlayView?.performClick()
         }
     }
 

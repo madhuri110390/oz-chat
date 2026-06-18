@@ -62,13 +62,17 @@ class AttachmentOverlayView @JvmOverloads constructor(
         // the tap doesn't land on the dedicated play/pause button (which has its own
         // listener above). A single shared togglePlayPause() is the only source of
         // truth, so a single tap reliably plays/pauses.
+        // WITH this:
         setOnClickListener {
             if (!isVideoAttachment) return@setOnClickListener
             if (views.overlayVideoControlsGroup.visibility != View.VISIBLE) {
+                // Tap 1 — just show controls, don't play/pause yet
                 showControls()
                 scheduleHideControls()
             } else {
-                hideControlsNow()    // <-- this branch runs on tap 1, not the reveal branch!
+                // Tap 2 — controls already visible, now toggle play/pause
+                togglePlayPause()
+                scheduleHideControls()
             }
         }
     }
@@ -88,17 +92,17 @@ class AttachmentOverlayView @JvmOverloads constructor(
     }
     fun setIsVideo(isVideo: Boolean) {
         isVideoAttachment = isVideo
-        // Top bar (back/share/download) is always visible, video or not.
         topBarViews.forEach { it.alpha = 1f; it.visibility = View.VISIBLE }
         if (isVideo) {
-            // Don't auto-schedule a hide here — we don't know play state yet.
-            // onEvent(VideoEvent) will drive playback-control visibility once playback starts.
             views.overlayVideoControlsGroup.visibility = View.VISIBLE
-            views.overlayVideoControlsGroup.isClickable= true
+            views.overlayVideoControlsGroup.isClickable = true
             playbackControlViews.forEach { it.alpha = 1f; it.visibility = View.VISIBLE }
+            // ✅ Show play icon initially (video starts playing, so show pause)
+            views.overlayPlayPauseButton.setImageResource(R.drawable.ic_pause)
+            // ✅ Auto-hide controls after 3 seconds
+            scheduleHideControls()
         } else {
             cancelHideControls()
-
         }
     }
 

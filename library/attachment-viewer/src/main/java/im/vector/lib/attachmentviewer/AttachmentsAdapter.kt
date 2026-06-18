@@ -20,6 +20,7 @@ class AttachmentsAdapter : RecyclerView.Adapter<BaseViewHolder>() {
         }
 
     var recyclerView: RecyclerView? = null
+    var onVideoClickListener: ((position: Int) -> Unit)? = null
 
     override fun onAttachedToRecyclerView(recyclerView: RecyclerView) {
         this.recyclerView = recyclerView
@@ -66,10 +67,14 @@ class AttachmentsAdapter : RecyclerView.Adapter<BaseViewHolder>() {
                     attachmentSourceProvider?.loadImage((holder as AnimatedImageViewHolder).target, it)
                 }
                 is AttachmentInfo.Video -> {
+                    // ✅ Keep this — loads thumbnail AND prepares video path
                     attachmentSourceProvider?.loadVideo((holder as VideoViewHolder).target, it)
+                    // ✅ Add click listener on top
+                    holder.itemView.setOnClickListener {
+                        onVideoClickListener?.invoke(position)
+                    }
                 }
-//                else                            -> {
-// //                }
+
             }
         }
     }

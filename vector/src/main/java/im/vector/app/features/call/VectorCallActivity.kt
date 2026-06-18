@@ -244,7 +244,7 @@ class VectorCallActivity :
     }
 
 
-//    override fun onNewIntent(intent: Intent) {
+    //    override fun onNewIntent(intent: Intent) {
 //        super.onNewIntent(intent)
 //        intent.takeIf { it.hasExtra(Mavericks.KEY_ARG) }
 //                ?.let { intent.getParcelableExtraCompat<CallArgs>(Mavericks.KEY_ARG) }
@@ -298,19 +298,19 @@ class VectorCallActivity :
 
 
 
-        // FIX #4: Detach renderers BEFORE releasing them to prevent
-        // "SurfaceViewRenderer already released" crash after long calls.
-        // detachRenderersIfNeeded() guards with surfaceRenderersAreInitialized flag.
-        override fun onDestroy() {
-            toneGenerator?.stopTone()
-            toneGenerator?.release()
-            toneGenerator = null
-            withState(callViewModel) { state ->
-                if (state.callState.invoke() is CallState.LocalRinging) {
-                    callViewModel.handle(VectorCallViewActions.DeclineCall)
-                }
+    // FIX #4: Detach renderers BEFORE releasing them to prevent
+    // "SurfaceViewRenderer already released" crash after long calls.
+    // detachRenderersIfNeeded() guards with surfaceRenderersAreInitialized flag.
+    override fun onDestroy() {
+        toneGenerator?.stopTone()
+        toneGenerator?.release()
+        toneGenerator = null
+        withState(callViewModel) { state ->
+            if (state.callState.invoke() is CallState.LocalRinging) {
+                callViewModel.handle(VectorCallViewActions.DeclineCall)
             }
-            detachRenderersIfNeeded()
+        }
+        detachRenderersIfNeeded()
         turnScreenOffAndKeyguardOn()
         removeOnPictureInPictureModeChangedListener(pictureInPictureModeChangedInfoConsumer)
         screenCaptureServiceConnection.unbind()
@@ -1141,7 +1141,7 @@ class VectorCallActivity :
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 startScreenSharingService(activityResult)
             } else {
-               // startScreenSharing(activityResult)
+                // startScreenSharing(activityResult)
                 android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({
                     startScreenSharing(activityResult)
                 }, 300)
