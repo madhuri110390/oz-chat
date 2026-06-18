@@ -48,6 +48,9 @@ abstract class AttachmentViewerActivity : AppCompatActivity(), AttachmentEventLi
             overlayView?.let { views.rootContainer.removeView(it) }
             views.rootContainer.addView(value)
             value?.updatePadding(top = topInset, bottom = bottomInset)
+            // ✅ Force overlay above SurfaceView
+            value?.bringToFront()
+            value?.elevation = 999f
             field = value
         }
 
@@ -59,7 +62,7 @@ abstract class AttachmentViewerActivity : AppCompatActivity(), AttachmentEventLi
     private lateinit var gestureDetector: GestureDetector
 
     var currentPosition = 0
-        private set
+
 
     private var swipeDirection: SwipeDirection? = null
     private fun isScaled() = attachmentsAdapter.isScaled(currentPosition)
@@ -69,10 +72,16 @@ abstract class AttachmentViewerActivity : AppCompatActivity(), AttachmentEventLi
     private var isOverlayWasClicked = false
     private var isImagePagerIdle = true
     private var lastEventConsumedByOverlay = false
+//    fun setSourceProvider(sourceProvider: AttachmentSourceProvider) {
+//        attachmentsAdapter.attachmentSourceProvider = sourceProvider
+//    }
     fun setSourceProvider(sourceProvider: AttachmentSourceProvider) {
         attachmentsAdapter.attachmentSourceProvider = sourceProvider
+        // ✅ Forward video tap to overlay
+        attachmentsAdapter.onVideoClickListener = { _ ->
+            overlayView?.performClick()
+        }
     }
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setDecorViewFullScreen()

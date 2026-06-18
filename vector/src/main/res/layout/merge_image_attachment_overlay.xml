@@ -39,9 +39,9 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
         android:layout_marginEnd="12dp"
+        android:layout_marginTop="24dp"
         android:ellipsize="end"
         android:maxLines="1"
-        android:layout_marginTop="24dp"
         android:textColor="?colorOnPrimary"
         android:textStyle="bold"
         app:layout_constraintBottom_toTopOf="@id/overlayInfoText"
@@ -101,12 +101,13 @@
         app:tint="?colorOnPrimary"
         tools:ignore="MissingPrefix" />
 
+    <!-- Group only controls overlayBottomBackground now -->
     <androidx.constraintlayout.widget.Group
         android:id="@+id/overlayVideoControlsGroup"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:visibility="gone"
-        app:constraint_referenced_ids="overlayBottomBackground,overlayPlayPauseButton,overlaySeekBar" />
+        app:constraint_referenced_ids="overlayBottomBackground" />
 
     <View
         android:id="@+id/overlayBottomBackground"
@@ -115,6 +116,8 @@
         android:background="@android:color/transparent"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent" />
+
+    <!-- invisible so ConstraintLayout measures it — width/height won't be 0 -->
     <ImageView
         android:id="@+id/overlayPlayPauseButton"
         android:layout_width="90dp"
@@ -124,15 +127,13 @@
         android:focusable="true"
         android:padding="12dp"
         android:scaleType="centerInside"
+        android:visibility="invisible"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        android:visibility="gone"
         app:srcCompat="@drawable/ic_play_arrow"
         app:tint="@color/videoPlayerAccentGreen"
         tools:ignore="MissingPrefix" />
-
-
 
 </merge>

@@ -33,7 +33,6 @@
         android:clickable="true"
         android:focusable="true"
         android:padding="12dp"
-        android:visibility="visible"
         android:scaleType="centerInside"
         app:srcCompat="@drawable/ic_play_arrow"
         app:tint="@color/videoPlayerAccentGreen" />

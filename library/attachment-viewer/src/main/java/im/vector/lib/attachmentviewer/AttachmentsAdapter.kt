@@ -8,6 +8,7 @@
 package im.vector.lib.attachmentviewer
 
 import android.view.LayoutInflater
+import android.view.View
 import android.view.ViewGroup
 import androidx.recyclerview.widget.RecyclerView
 
@@ -70,8 +71,23 @@ class AttachmentsAdapter : RecyclerView.Adapter<BaseViewHolder>() {
                     // ✅ Keep this — loads thumbnail AND prepares video path
                     attachmentSourceProvider?.loadVideo((holder as VideoViewHolder).target, it)
                     // ✅ Add click listener on top
+//                    holder.itemView.setOnClickListener {
+//                        onVideoClickListener?.invoke(position)
+//                    }
                     holder.itemView.setOnClickListener {
+                        // Toggle play/pause and update icon
+                        val videoHolder = holder as VideoViewHolder
                         onVideoClickListener?.invoke(position)
+                        // Toggle icon
+                        val isPlaying = videoHolder.views.videoView.isPlaying
+                        videoHolder.views.videoControlIcon.setImageResource(
+                                if (isPlaying) R.drawable.ic_play_arrow else R.drawable.ic_pause_arrow
+                        )
+                        // Auto hide after 2 seconds
+                        videoHolder.views.videoControlIcon.visibility = View.VISIBLE
+                        videoHolder.views.videoControlIcon.postDelayed({
+                            videoHolder.views.videoControlIcon.visibility = View.GONE
+                        }, 2000L)
                     }
                 }
 

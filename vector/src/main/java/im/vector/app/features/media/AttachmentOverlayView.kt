@@ -65,12 +65,13 @@ class AttachmentOverlayView @JvmOverloads constructor(
         // WITH this:
         setOnClickListener {
             if (!isVideoAttachment) return@setOnClickListener
-            if (views.overlayVideoControlsGroup.visibility != View.VISIBLE) {
-                // Tap 1 — just show controls, don't play/pause yet
-                showControls()
+            if (views.overlayPlayPauseButton.visibility != View.VISIBLE) {
+                // Tap 1 — show icon only
+                views.overlayPlayPauseButton.visibility = View.VISIBLE
+                views.overlayPlayPauseButton.alpha = 1f
                 scheduleHideControls()
             } else {
-                // Tap 2 — controls already visible, now toggle play/pause
+                // Tap 2 — toggle play/pause
                 togglePlayPause()
                 scheduleHideControls()
             }
@@ -90,18 +91,43 @@ class AttachmentOverlayView @JvmOverloads constructor(
         )
         interactionListener?.onPlayPause(requestedPlay)
     }
+//    fun setIsVideo(isVideo: Boolean) {
+//        isVideoAttachment = isVideo
+//        topBarViews.forEach { it.alpha = 1f; it.visibility = View.VISIBLE }
+//        if (isVideo) {
+//            // ✅ Only set Group visibility — don't touch individual views
+//            views.overlayVideoControlsGroup.visibility = View.VISIBLE
+//            views.overlayPlayPauseButton.setImageResource(R.drawable.ic_pause_arrow)
+//            scheduleHideControls()
+//        } else {
+//            views.overlayVideoControlsGroup.visibility = View.GONE
+//            cancelHideControls()
+//        }
+//    }
+private fun showControls() {
+    cancelHideControls()
+    views.overlayPlayPauseButton.visibility = View.VISIBLE
+    views.overlayPlayPauseButton.alpha = 1f
+}
+
+    private fun hideControlsNow() {
+        cancelHideControls()
+        views.overlayPlayPauseButton.visibility = View.GONE
+    }
     fun setIsVideo(isVideo: Boolean) {
         isVideoAttachment = isVideo
         topBarViews.forEach { it.alpha = 1f; it.visibility = View.VISIBLE }
         if (isVideo) {
-            views.overlayVideoControlsGroup.visibility = View.VISIBLE
-            views.overlayVideoControlsGroup.isClickable = true
-            playbackControlViews.forEach { it.alpha = 1f; it.visibility = View.VISIBLE }
-            // ✅ Show play icon initially (video starts playing, so show pause)
+            isPlaying = true  // ✅ video starts playing
+            views.overlayPlayPauseButton.visibility = View.VISIBLE
+            views.overlayPlayPauseButton.alpha = 1f
             views.overlayPlayPauseButton.setImageResource(R.drawable.ic_pause)
-            // ✅ Auto-hide controls after 3 seconds
+            views.overlayPlayPauseButton.bringToFront()
+            views.overlayPlayPauseButton.elevation = 999f
+            views.overlayPlayPauseButton.requestLayout()
             scheduleHideControls()
         } else {
+            views.overlayPlayPauseButton.visibility = View.INVISIBLE
             cancelHideControls()
         }
     }
@@ -117,29 +143,29 @@ class AttachmentOverlayView @JvmOverloads constructor(
         return super.onInterceptTouchEvent(ev)
     }
 
-    private fun showControls() {
-        cancelHideControls()
-        views.overlayVideoControlsGroup.visibility = View.VISIBLE
-        views.overlayVideoControlsGroup.isClickable= true
-        playbackControlViews.forEach {
-            if (it.alpha < 1f || it.visibility != View.VISIBLE) {
-                it.animate().cancel()
-                it.alpha = 0f
-                it.visibility = View.VISIBLE
-                it.animate().alpha(1f).setDuration(200).start()
-            }
-        }
-    }
-
-    private fun hideControlsNow() {
-        cancelHideControls()
-        playbackControlViews.forEach {
-            it.animate().cancel()
-            it.animate().alpha(0f).setDuration(200).withEndAction {
-                views.overlayVideoControlsGroup.visibility = View.GONE
-            }.start()
-        }
-    }
+//    private fun showControls() {
+//        cancelHideControls()
+//        views.overlayVideoControlsGroup.visibility = View.VISIBLE
+//        views.overlayVideoControlsGroup.isClickable= true
+//        playbackControlViews.forEach {
+//            if (it.alpha < 1f || it.visibility != View.VISIBLE) {
+//                it.animate().cancel()
+//                it.alpha = 0f
+//                it.visibility = View.VISIBLE
+//                it.animate().alpha(1f).setDuration(200).start()
+//            }
+//        }
+//    }
+//
+//    private fun hideControlsNow() {
+//        cancelHideControls()
+//        playbackControlViews.forEach {
+//            it.animate().cancel()
+//            it.animate().alpha(0f).setDuration(200).withEndAction {
+//                views.overlayVideoControlsGroup.visibility = View.GONE
+//            }.start()
+//        }
+//    }
 
     private fun scheduleHideControls() {
         cancelHideControls()

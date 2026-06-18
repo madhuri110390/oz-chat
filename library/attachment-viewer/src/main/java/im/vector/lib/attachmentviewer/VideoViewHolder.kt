@@ -109,17 +109,7 @@ class VideoViewHolder constructor(itemView: View) :
         }
     }
 
-    private fun startPlaying() {
-        isPrepared = false
-        views.videoLoaderProgress.isVisible = true
-        views.videoMediaViewerErrorView.isVisible = false
-        views.videoThumbnailImage.isVisible = true   // ✅ show thumbnail
-        views.videoView.visibility = View.VISIBLE
-        // ✅ Force SurfaceView to render on top
-        views.videoView.setZOrderOnTop(true)
-        views.videoSeekBar.isVisible = true
-        setVideoAndPlay()
-    }
+
 
     private fun setVideoAndPlay() {
         views.videoView.stopPlayback()
@@ -297,15 +287,28 @@ class VideoViewHolder constructor(itemView: View) :
         }
     }
 
+    // In bind():
     override fun bind(attachmentInfo: AttachmentInfo) {
         super.bind(attachmentInfo)
         pendingPlay = false
-
         views.videoSeekBar.isVisible = true
-        // The overlay's play/pause button (AttachmentOverlayView) is the single tap
-        // target for play/pause. The in-video icon must NOT also handle clicks, or a
-        // single physical tap gets handled twice and play/pause needs multiple taps.
+        views.videoControlIcon.visibility = View.VISIBLE
+        views.videoControlIcon.setImageResource(R.drawable.ic_pause_arrow)
         views.videoControlIcon.setOnClickListener(null)
         views.videoControlIcon.isClickable = false
+    }
+
+    // In startPlaying():
+    private fun startPlaying() {
+        isPrepared = false
+        views.videoLoaderProgress.isVisible = true
+        views.videoMediaViewerErrorView.isVisible = false
+        views.videoView.visibility = View.VISIBLE
+        views.videoView.bringToFront()
+        views.videoThumbnailImage.isVisible = true
+        views.videoControlIcon.visibility = View.VISIBLE  // ✅
+        views.videoControlIcon.setImageResource(R.drawable.ic_pause_arrow)
+        views.videoSeekBar.isVisible = true
+        setVideoAndPlay()
     }
 }
