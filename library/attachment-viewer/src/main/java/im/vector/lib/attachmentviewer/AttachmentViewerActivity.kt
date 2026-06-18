@@ -21,6 +21,7 @@ import android.widget.ImageView
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.content.ContextCompat
 import androidx.core.view.WindowCompat
+import androidx.core.view.doOnLayout
 import androidx.core.view.isVisible
 import androidx.core.view.updatePadding
 import androidx.transition.TransitionManager
@@ -94,7 +95,7 @@ abstract class AttachmentViewerActivity : AppCompatActivity(), AttachmentEventLi
             // first video/image never receives onSelected(true) and stays unselected
             // until the user swipes away and back. Force-select once the pager has
             // settled on its starting position.
-            post {
+            doOnLayout {
                 onSelectedPositionChanged(currentItem)
             }
         }
@@ -156,14 +157,17 @@ abstract class AttachmentViewerActivity : AppCompatActivity(), AttachmentEventLi
     // so the overlay (back button, play/pause, etc.) could never be toggled
     // back on once hidden.
 
-
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
-        if (overlayView?.isVisible == true &&
-                overlayView?.dispatchTouchEvent(ev) == true) {
-            lastEventConsumedByOverlay = true
+        val overlayConsumed = overlayView?.isVisible == true && overlayView?.dispatchTouchEvent(ev) == true
+        lastEventConsumedByOverlay = overlayConsumed
+
+        if (ev.action == MotionEvent.ACTION_DOWN) {
+            isOverlayWasClicked = overlayConsumed
+        }
+
+        if (overlayConsumed) {
             return true
         }
-        lastEventConsumedByOverlay = false
 
         handleUpDownEvent(ev)
 
@@ -186,18 +190,20 @@ abstract class AttachmentViewerActivity : AppCompatActivity(), AttachmentEventLi
         gestureDetector.onTouchEvent(event)
     }
 
+    // NOTE: previously these two also called views.attachmentPager.dispatchTouchEvent(event)
+    // directly. That caused a double-dispatch: the pager (and its child views, including
+    // VideoViewHolder's videoControlIcon) could receive ACTION_DOWN or ACTION_UP twice for
+    // a single physical tap — once here, once again via handleTouchIfNotScaled() below.
+    // Forwarding to the pager now happens exactly once, at the bottom of handleTouchIfNotScaled,
+    // so every tap reaches child views as a single clean DOWN/UP pair.
     private fun handleEventActionDown(event: MotionEvent) {
         swipeDirection = null
         wasScaled = false
-        views.attachmentPager.dispatchTouchEvent(event)
         swipeDismissHandler.onTouch(views.rootContainer, event)
-        isOverlayWasClicked = lastEventConsumedByOverlay
     }
 
     private fun handleEventActionUp(event: MotionEvent) {
         swipeDismissHandler.onTouch(views.rootContainer, event)
-        views.attachmentPager.dispatchTouchEvent(event)
-        isOverlayWasClicked = lastEventConsumedByOverlay
     }
 
     private fun handleSingleTap(event: MotionEvent, isOverlayWasClicked: Boolean) {
@@ -222,8 +228,11 @@ abstract class AttachmentViewerActivity : AppCompatActivity(), AttachmentEventLi
                 if (isSwipeToDismissAllowed && !wasScaled && isImagePagerIdle) {
                     swipeDismissHandler.onTouch(views.rootContainer, event)
                 } else true
-            SwipeDirection.Left, SwipeDirection.Right -> views.attachmentPager.dispatchTouchEvent(event)
-            else -> true
+            // A plain tap leaves swipeDirection null (it's reset on every ACTION_DOWN and
+            // only set once a real swipe is detected). The null case must be forwarded to
+            // the pager just like Left/Right so child views receive a clean DOWN/UP pair;
+            // otherwise a single tap on the video control would be dropped.
+            else -> views.attachmentPager.dispatchTouchEvent(event)
         }
     }
 
@@ -270,11 +279,11 @@ abstract class AttachmentViewerActivity : AppCompatActivity(), AttachmentEventLi
         }
         finish()
     }
-
     fun handle(commands: AttachmentCommands) {
-        (attachmentsAdapter.recyclerView?.findViewHolderForAdapterPosition(currentPosition) as? BaseViewHolder)?.handleCommand(commands)
+        val holder = attachmentsAdapter.recyclerView?.findViewHolderForAdapterPosition(currentPosition)
+        android.util.Log.d("PauseDebug", "handle($commands) currentPosition=$currentPosition holder=$holder")
+        (holder as? BaseViewHolder)?.handleCommand(commands)
     }
-
     private fun hideSystemUI() {
         overlayView?.isVisible = false
         systemUiVisibility = false

@@ -117,8 +117,8 @@
         app:layout_constraintBottom_toBottomOf="parent" />
     <ImageView
         android:id="@+id/overlayPlayPauseButton"
-        android:layout_width="64dp"
-        android:layout_height="64dp"
+        android:layout_width="90dp"
+        android:layout_height="90dp"
         android:clickable="true"
         android:contentDescription="@string/action_play"
         android:focusable="true"
@@ -128,9 +128,11 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
+        android:visibility="gone"
         app:srcCompat="@drawable/ic_play_arrow"
         app:tint="@color/videoPlayerAccentGreen"
         tools:ignore="MissingPrefix" />
+
 
 
 </merge>

@@ -10,10 +10,8 @@ package im.vector.app.features.media
 import android.content.Context
 import android.graphics.Color
 import android.util.AttributeSet
-import android.util.Log
 import android.view.MotionEvent
 import android.view.View
-import android.widget.SeekBar
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.view.isVisible
 import im.vector.app.R
@@ -21,13 +19,15 @@ import im.vector.app.databinding.MergeImageAttachmentOverlayBinding
 import im.vector.lib.attachmentviewer.AttachmentEventListener
 import im.vector.lib.attachmentviewer.AttachmentEvents
 
+
 class AttachmentOverlayView @JvmOverloads constructor(
         context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0
 ) : ConstraintLayout(context, attrs, defStyleAttr), AttachmentEventListener {
 
     var interactionListener: AttachmentInteractionListener? = null
     val views: MergeImageAttachmentOverlayBinding
-
+    private var lastManualToggleAtMs = 0L
+    private val manualToggleGuardMs = 400L
     private var isPlaying = false
     private var suspendSeekBarUpdate = false
     private var hideControlsRunnable: Runnable? = null
@@ -36,6 +36,7 @@ class AttachmentOverlayView @JvmOverloads constructor(
     // Only the center play/pause button auto-hides during playback.
     private val playbackControlViews get() = listOf(
             views.overlayPlayPauseButton,
+
     )
 
     // Back/share/download stay visible at all times, regardless of play state.
@@ -55,43 +56,40 @@ class AttachmentOverlayView @JvmOverloads constructor(
         views.overlayBackButton.setOnClickListener { interactionListener?.onDismiss() }
         views.overlayShareButton.setOnClickListener { interactionListener?.onShare() }
         views.overlayDownloadButton.setOnClickListener { interactionListener?.onDownload() }
-        views.overlayPlayPauseButton.setOnClickListener {
-            Log.d("OVERLAY_TAP", "play/pause button tapped, isPlaying=$isPlaying")
-            interactionListener?.onPlayPause(!isPlaying)
-            scheduleHideControls()
-        }
+        views.overlayPlayPauseButton.setOnClickListener { togglePlayPause() }
 
-//        views.overlaySeekBar.setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
-//            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-//                if (fromUser) interactionListener?.videoSeekTo(progress)
-//            }
-//            override fun onStartTrackingTouch(seekBar: SeekBar?) {
-//                suspendSeekBarUpdate = true
-//                cancelHideControls()
-//            }
-//            override fun onStopTrackingTouch(seekBar: SeekBar?) {
-//                suspendSeekBarUpdate = false
-//                scheduleHideControls()
-//            }
-//        })
-
+        // Tapping anywhere on the (video) overlay toggles play/pause, but only when
+        // the tap doesn't land on the dedicated play/pause button (which has its own
+        // listener above). A single shared togglePlayPause() is the only source of
+        // truth, so a single tap reliably plays/pauses.
         setOnClickListener {
             if (!isVideoAttachment) return@setOnClickListener
-            val controlsVisible = views.overlayVideoControlsGroup.visibility == View.VISIBLE
-            if (controlsVisible) {
-                if (isPlaying) {
-                    // Tapping while playing hides playback controls immediately (like YouTube).
-                    hideControlsNow()
-                }
-                // Tapping while paused: controls already visible, do nothing.
-            } else {
+            if (views.overlayVideoControlsGroup.visibility != View.VISIBLE) {
+                // First tap: just reveal controls, video keeps playing.
                 showControls()
-                if (isPlaying) scheduleHideControls()
-                // If paused, controls stay up indefinitely (no scheduleHideControls call).
+                scheduleHideControls()
+            } else {
+                // Controls already visible: this tap hides them again.
+                hideControlsNow()
             }
         }
     }
 
+    /**
+     * Single source of truth for play/pause. Updates local state and the icon
+     * optimistically (so a tap is never undone by an in-flight 100ms VideoEvent
+     * tick), then notifies the listener exactly once.
+     */
+    private fun togglePlayPause() {
+        interactionListener?.onPlayPause()
+//        val requestedPlay = !isPlaying
+//        isPlaying = requestedPlay
+//        lastManualToggleAtMs = System.currentTimeMillis()  // <-- mark this as a fresh user action
+//        views.overlayPlayPauseButton.setImageResource(
+//                if (requestedPlay) R.drawable.ic_pause else R.drawable.ic_play_arrow
+//        )
+//        interactionListener?.onPlayPause(requestedPlay)
+    }
     fun setIsVideo(isVideo: Boolean) {
         isVideoAttachment = isVideo
         // Top bar (back/share/download) is always visible, video or not.
@@ -100,17 +98,15 @@ class AttachmentOverlayView @JvmOverloads constructor(
             // Don't auto-schedule a hide here — we don't know play state yet.
             // onEvent(VideoEvent) will drive playback-control visibility once playback starts.
             views.overlayVideoControlsGroup.visibility = View.VISIBLE
+            views.overlayVideoControlsGroup.isClickable= true
             playbackControlViews.forEach { it.alpha = 1f; it.visibility = View.VISIBLE }
         } else {
             cancelHideControls()
-            views.overlayVideoControlsGroup.visibility = View.GONE
+
         }
     }
 
     override fun dispatchTouchEvent(ev: MotionEvent): Boolean {
-        if (ev.action == MotionEvent.ACTION_DOWN) {
-            Log.d("OVERLAY_TAP", "overlay dispatchTouchEvent ACTION_DOWN received")
-        }
         if (ev.pointerCount > 1) return false
         return super.dispatchTouchEvent(ev)
     }
@@ -124,11 +120,14 @@ class AttachmentOverlayView @JvmOverloads constructor(
     private fun showControls() {
         cancelHideControls()
         views.overlayVideoControlsGroup.visibility = View.VISIBLE
+        views.overlayVideoControlsGroup.isClickable= true
         playbackControlViews.forEach {
-            it.animate().cancel()
-            it.alpha = 0f
-            it.visibility = View.VISIBLE
-            it.animate().alpha(1f).setDuration(200).start()
+            if (it.alpha < 1f || it.visibility != View.VISIBLE) {
+                it.animate().cancel()
+                it.alpha = 0f
+                it.visibility = View.VISIBLE
+                it.animate().alpha(1f).setDuration(200).start()
+            }
         }
     }
 
@@ -162,7 +161,14 @@ class AttachmentOverlayView @JvmOverloads constructor(
     override fun onEvent(event: AttachmentEvents) {
         when (event) {
             is AttachmentEvents.VideoEvent -> {
-                val wasPlaying = isPlaying
+                // Ignore stale ticks that arrive shortly after a manual toggle and
+                // disagree with what the user just requested — these come from the
+                // old timer/MediaPlayer callback racing the pause/play command.
+                val withinGuardWindow = System.currentTimeMillis() - lastManualToggleAtMs < manualToggleGuardMs
+                if (withinGuardWindow && event.isPlaying != isPlaying) {
+                    return
+                }
+
                 isPlaying = event.isPlaying
                 views.overlayPlayPauseButton.setImageResource(
                         if (isPlaying) R.drawable.ic_pause else R.drawable.ic_play_arrow
@@ -171,19 +177,9 @@ class AttachmentOverlayView @JvmOverloads constructor(
                 if (!suspendSeekBarUpdate) {
                     val safeDuration = (if (event.duration == 0) 100 else event.duration).toFloat()
                     val percent = ((event.progress / safeDuration) * 100f).toInt().coerceAtMost(100)
-                    // seekbar progress update here if applicable
                 }
 
-                when {
-                    !wasPlaying && isPlaying -> {
-                        showControls()
-                        scheduleHideControls()
-                    }
-                    wasPlaying && !isPlaying -> {
-                        cancelHideControls()
-                        showControls()
-                    }
-                }
+                showControls()
             }
         }
     }

@@ -133,7 +133,6 @@ class CallAndroidService : VectorAndroidService() {
                         ?.let { vectorPreferences.getRoomNotificationTone(it) }
                 displayIncomingCallNotification(intent)
                 if (isFirstArrival) {
-                    Timber.e("RING_DEBUG calling incomingCallRinger.start()")
                     incomingCallRinger.start(fromBg, customTone)
                 }
             }

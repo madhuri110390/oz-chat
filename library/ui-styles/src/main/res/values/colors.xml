@@ -9,7 +9,7 @@
     <!-- Notification view colors -->
     <color name="soft_resource_limit_exceeded_brown">@color/palette_azure_brown</color>
     <color name="hard_resource_limit_exceeded_brown">?colorError</color>
-    <color name="videoPlayerAccentGreen">#1DB954</color>
+    <color name="videoPlayerAccentGreen">#009688</color>
     <!-- Notification (do not depend on theme) -->
     <color name="notification_accent_color_brown">@color/palette_azure_brown</color>
     <color name="key_share_req_accent_color_brown">@color/palette_melon_brown</color>

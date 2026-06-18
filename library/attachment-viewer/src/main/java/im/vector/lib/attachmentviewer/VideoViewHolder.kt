@@ -24,6 +24,7 @@ class VideoViewHolder constructor(itemView: View) :
     private var progress: Int = 0
     private var pendingPlay = false
     private var isPrepared = false
+    private var pendingPause = false
 
     var eventListener: WeakReference<AttachmentEventListener>? = null
 
@@ -61,7 +62,6 @@ class VideoViewHolder constructor(itemView: View) :
 
     fun videoFileLoadError() {
         views.videoLoaderProgress.isVisible = false
-        views.videoControlIcon.isVisible = false
         views.videoThumbnailImage.isVisible = true
         views.videoMediaViewerErrorView.isVisible = true
         views.videoSeekBar.isVisible = true
@@ -110,7 +110,6 @@ class VideoViewHolder constructor(itemView: View) :
     private fun startPlaying() {
         isPrepared = false
         views.videoLoaderProgress.isVisible = true
-        views.videoControlIcon.isVisible = false
         views.videoMediaViewerErrorView.isVisible = false
         views.videoView.visibility = View.VISIBLE
         views.videoSeekBar.isVisible = true
@@ -121,15 +120,19 @@ class VideoViewHolder constructor(itemView: View) :
         views.videoView.stopPlayback()
 
         views.videoView.setOnCompletionListener {
-            views.videoView.stopPlayback()
-            isPrepared = false
-            stopTimer()
-            views.videoThumbnailImage.isVisible = true
-            views.videoControlIcon.isVisible = true
-            views.videoControlIcon.setImageResource(R.drawable.ic_play_arrow)
-            views.videoSeekBar.isVisible = true
             progress = 0
-            eventListener?.get()?.onEvent(AttachmentEvents.VideoEvent(false, 0, views.videoView.duration))
+            views.videoView.seekTo(0)
+            views.videoView.start()
+            if (progress > 0) {
+                views.videoView.seekTo(progress)
+            }
+            startTimer()
+            if (pendingPause) {
+                pendingPause = false
+                views.videoView.pause()
+                stopTimer()
+            }
+            eventListener?.get()?.onEvent(AttachmentEvents.VideoEvent(true, 0, views.videoView.duration))
         }
 
         views.videoView.setOnErrorListener { _, what, extra ->
@@ -138,7 +141,6 @@ class VideoViewHolder constructor(itemView: View) :
             isPrepared = false
             views.videoView.isVisible = false
             views.videoThumbnailImage.isVisible = false
-            views.videoControlIcon.isVisible = false
             views.videoLoaderProgress.isVisible = false
             views.videoMediaViewerErrorView.isVisible = true
             views.videoSeekBar.isVisible = true
@@ -153,7 +155,6 @@ class VideoViewHolder constructor(itemView: View) :
             views.videoView.translationZ = 0f
             views.videoView.elevation = 0f
             views.videoLoaderProgress.isVisible = false
-            views.videoSeekBar.isVisible = isLandscapeOrientation()
             views.videoSeekBar.setOnSeekBarChangeListener(object : android.widget.SeekBar.OnSeekBarChangeListener {
                 override fun onProgressChanged(seekBar: android.widget.SeekBar?, value: Int, fromUser: Boolean) {
                     if (fromUser) {
@@ -170,6 +171,11 @@ class VideoViewHolder constructor(itemView: View) :
                 views.videoView.seekTo(progress)
             }
             startTimer()
+            if (pendingPause) {
+                pendingPause = false
+                views.videoView.pause()
+                stopTimer()
+            }
             views.videoView.postDelayed({
                 views.videoThumbnailImage.isVisible = false
             }, 150L)
@@ -191,7 +197,6 @@ class VideoViewHolder constructor(itemView: View) :
             isPrepared = false
             views.videoView.isVisible = false
             views.videoThumbnailImage.isVisible = false
-            views.videoControlIcon.isVisible = false
             views.videoLoaderProgress.isVisible = false
             views.videoMediaViewerErrorView.isVisible = true
             views.videoSeekBar.isVisible = true
@@ -217,51 +222,67 @@ class VideoViewHolder constructor(itemView: View) :
         countUpTimer = null
     }
 
-    // Shared, fully-guarded resume logic used by BOTH the small in-video icon
-    // (via togglePlayPause) and the big overlay icon (via handleCommand).
-    // Previously handleCommand called views.videoView.start() directly with
-    // no safety checks, so the overlay's big button never benefited from the
-    // surface-validity/verify-it-actually-started fixes added to togglePlayPause.
+    // Shared, fully-guarded resume logic. Verifies the surface is valid before
+    // calling start(), and re-prepares if playback doesn't actually resume.
     private fun resumePlayback() {
         val surfaceValid = views.videoView.holder?.surface?.isValid == true
-        Log.d("VideoViewHolder", "resumePlayback: surfaceValid=$surfaceValid at ${System.currentTimeMillis()}")
         if (surfaceValid) {
             views.videoView.start()
             startTimer()
-            views.videoControlIcon.isVisible = false
             views.videoView.postDelayed({
                 if (!views.videoView.isPlaying) {
-                    Log.w("VideoViewHolder", "start() did not actually resume playback — forcing re-prepare")
                     isPrepared = false
-                    views.videoControlIcon.isVisible = false
                     startPlaying()
                 }
             }, 300L)
         } else {
-            Log.w("VideoViewHolder", "Resume requested but surface invalid — re-preparing instead of start()")
             isPrepared = false
-            views.videoControlIcon.isVisible = false
             startPlaying()
         }
     }
 
     override fun handleCommand(commands: AttachmentCommands) {
+        android.util.Log.d("PauseDebug", "handleCommand($commands) isSelected=$isSelected isPrepared=$isPrepared")
         if (!isSelected) return
         when (commands) {
             AttachmentCommands.StartVideo -> {
                 if (isPrepared) {
                     resumePlayback()
+                } else {
+                    pendingPlay = true
+                    pendingPause = false
                 }
             }
             AttachmentCommands.PauseVideo -> {
                 if (isPrepared) {
-                    views.videoView.pause()
                     stopTimer()
-                    views.videoControlIcon.isVisible = true
-                    views.videoControlIcon.setImageResource(R.drawable.ic_play_arrow)
+                    if (views.videoView.isPlaying) {
+                        views.videoView.pause()
+                    }
+                    // VideoView/MediaPlayer can silently ignore pause() if its internal
+                    // state is out of sync with our isPrepared flag. Verify it actually
+                    // took effect; if not, fall back to stopPlayback() + reset so the
+                    // video definitively halts rather than continuing to play unseen.
+                    views.videoView.postDelayed({
+                        if (views.videoView.isPlaying) {
+                            Log.w(VideoViewHolder::class.java.name, "pause() did not take effect, forcing stop")
+                            progress = views.videoView.currentPosition
+                            views.videoView.pause()
+                            if (views.videoView.isPlaying) {
+                                // Last resort: tear down and reinitialize paused at the same position.
+                                views.videoView.stopPlayback()
+                                isPrepared = false
+                                pendingPause = true
+                                setVideoAndPlay()
+                            }
+                        }
+                    }, 50L)
                     eventListener?.get()?.onEvent(
                             AttachmentEvents.VideoEvent(false, views.videoView.currentPosition, views.videoView.duration)
                     )
+                } else {
+                    pendingPause = true
+                    pendingPlay = false
                 }
             }
             is AttachmentCommands.SeekTo -> {
@@ -270,41 +291,21 @@ class VideoViewHolder constructor(itemView: View) :
                     val seekDuration = duration * (commands.percentProgress / 100f)
                     views.videoView.seekTo(seekDuration.toInt())
                     views.videoSeekBar.progress = seekDuration.toInt()
+
                 }
             }
-        }
-    }
-
-    private fun togglePlayPause() {
-        Log.d("VideoViewHolder", "togglePlayPause ENTERED at ${System.currentTimeMillis()}, isPlaying=${views.videoView.isPlaying}, isPrepared=$isPrepared")
-        if (!isPrepared) {
-            if (mVideoPath != null) {
-                startPlaying()
-            } else {
-                pendingPlay = true
-            }
-            return
-        }
-        if (views.videoView.isPlaying) {
-            views.videoView.pause()
-            stopTimer()
-            progress = views.videoView.currentPosition
-            views.videoControlIcon.isVisible = true
-            views.videoControlIcon.setImageResource(R.drawable.ic_play_arrow)
-        } else {
-            resumePlayback()
         }
     }
 
     override fun bind(attachmentInfo: AttachmentInfo) {
         super.bind(attachmentInfo)
         pendingPlay = false
-        views.videoControlIcon.isVisible = true
-        views.videoSeekBar.isVisible = true
 
-        val tapListener = View.OnClickListener { togglePlayPause() }
-        views.videoControlIcon.setOnClickListener(tapListener)
-        views.videoThumbnailImage.setOnClickListener(tapListener)
-        views.videoView.setOnClickListener(tapListener)
+        views.videoSeekBar.isVisible = true
+        // The overlay's play/pause button (AttachmentOverlayView) is the single tap
+        // target for play/pause. The in-video icon must NOT also handle clicks, or a
+        // single physical tap gets handled twice and play/pause needs multiple taps.
+        views.videoControlIcon.setOnClickListener(null)
+        views.videoControlIcon.isClickable = false
     }
 }
